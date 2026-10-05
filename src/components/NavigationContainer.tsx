@@ -42,6 +42,7 @@ import { NativeDragTabs } from "src/services/NativeDragTabs";
 import { addMenuItemsToFileContextMenu } from "src/services/OpenFile";
 import { createBookmarkForGroup } from "src/models/VTBookmark";
 import { getGroupTitle } from "src/services/Customization";
+import { reconcileSubgroups } from "src/services/Subgroups";
 
 export const NavigationContainer = () => {
 	const plugin = usePlugin();
@@ -133,6 +134,7 @@ export const NavigationContainer = () => {
 		window.setTimeout(() => {
 			updateEphemeralTabs(app);
 			refresh(app);
+			reconcileSubgroups(app);
 			removeNewTabs();
 			sort();
 		});

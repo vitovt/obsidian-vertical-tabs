@@ -42,6 +42,7 @@ import { useSettings } from "./PluginContext";
 import { isHoverEditorEnabled } from "src/services/HoverEditorTabs";
 import { NativeDragTabs } from "src/services/NativeDragTabs";
 import { localStorageService } from "src/stores/LocalStorageService";
+import { getLeafSubgroup, useSubgroups } from "src/stores/SubgroupStore";
 
 export type PinningEvents = DefaultRecord<Identifier, EventRef | null>;
 export type PinningEventCallback = (pinned: boolean) => void;
@@ -613,11 +614,13 @@ export const useViewState = create<ViewState>()((set, get) => ({
 		}
 	},
 	setAllCollapsed() {
+		useSubgroups.getState().setAllCollapsed(true);
 		const ids = tabCacheStore.getState().groupIDs;
 		set({ globalCollapseState: true, collapsedGroups: ids });
 		saveCollapsedGroups(ids);
 	},
 	setAllExpanded() {
+		useSubgroups.getState().setAllCollapsed(false);
 		set({ globalCollapseState: false, collapsedGroups: [] });
 		saveCollapsedGroups([]);
 	},
@@ -632,6 +635,8 @@ export const useViewState = create<ViewState>()((set, get) => ({
 		if (isSidebar) return;
 		if (!group.id) return;
 		get().toggleCollapsedGroup(group.id, false);
+		const subgroupId = getLeafSubgroup(useSubgroups.getState().data, latestActiveLeaf.id, group.id);
+		if (subgroupId) useSubgroups.getState().setCollapsed(subgroupId, false);
 		set({ globalCollapseState: false });
 	},
 	executeSmartNavigation(
@@ -737,6 +742,9 @@ export const useViewState = create<ViewState>()((set, get) => ({
 			const target = latestParent.children[realIndex - 1];
 			if (!target) return;
 			if (checking) return true;
+			get().toggleCollapsedGroup(latestParent.id, false);
+			const subgroupId = getLeafSubgroup(useSubgroups.getState().data, target.id, latestParent.id);
+			if (subgroupId) useSubgroups.getState().setCollapsed(subgroupId, false);
 			set({ latestActiveLeaf: target });
 			app.workspace.setActiveLeaf(target, { focus: true });
 			const viewType = identifyGroupViewType(target.parent);
