@@ -14,7 +14,10 @@ let pendingMoves = 0;
 export function reconcileSubgroups(app: App) {
 	if (pendingMoves || !app.workspace.layoutReady) return;
 	const parents = new Map<string, string>();
-	app.workspace.iterateAllLeaves((leaf) => parents.set(leaf.id, leaf.parent.id));
+	app.workspace.iterateAllLeaves((leaf): void => {
+		// A truthy callback result stops Obsidian's traversal of this tree.
+		parents.set(leaf.id, leaf.parent.id);
+	});
 	useSubgroups.getState().reconcile(parents);
 }
 

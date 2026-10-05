@@ -21,14 +21,20 @@ the resulting frame times in a live Obsidian workspace.
 
 Subgroup tests exercise membership persistence, invalid-record recovery,
 external tab movement, interrupted transfers, native sorting, and server
-rendering of the real navigation tree. They exercise both the move adapter and
-the real native end-move code with fake workspace objects; these tests do not
-prove compatibility with a running Obsidian workspace.
+rendering of the real navigation tree. The workspace iterator reproduces
+Obsidian's early exit on truthy callback results, and regressions cover sequential
+additions to one subgroup and simultaneous membership in several subgroups.
+They exercise both the move adapter and the real native end-move code with fake
+workspace objects; these tests do not prove compatibility with a running
+Obsidian workspace.
 
 To verify subgroups in Obsidian:
 
-1. Create two subgroups, rename them, add tabs, and leave one subgroup empty.
-   Collapse a subgroup and confirm its active tab stays open in the same pane.
+1. Create three subgroups and rename them. Add several tabs one at a time to each
+   of the first two, using both drag-and-drop and `Move to subgroup...`, and leave
+   the third empty. Confirm earlier members stay in place when adding a tab to
+   either populated subgroup. Collapse a subgroup and confirm its active tab
+   stays open in the same pane.
 2. Sort the real group, then drag a tab onto a subgroup header and before another
    tab. Check that membership survives sorting and indices still follow the native
    tab order. Repeat with multiple selected tabs and a collapsed target.
