@@ -181,11 +181,16 @@ export const tabCacheStore = useStoreWithActions<TabCacheStore>((set, get) => ({
 					const group =
 						entry.group || entry.leaves[0]?.parent || null;
 					if (group) {
-						entry.leaves = sortTabs(group, sortStrategy);
+						const visibleIds = new Set(entry.leafIDs);
+						entry.leaves = sortTabs(group, sortStrategy).filter((leaf) => visibleIds.has(leaf.id));
+						entry.leafIDs = entry.leaves.map((leaf) => leaf.id);
 					}
 				}
 			}
-			set({ content: newTabs });
+			set({
+				content: newTabs,
+				leafIDs: Array.from(newTabs.values()).flatMap((entry) => entry.leafIDs),
+			});
 		},
 		hasOnlyOneGroup: () => {
 			const { groupIDs } = get();
