@@ -1,38 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
-import { runInNewContext } from "node:vm";
-import { transformSync } from "esbuild";
-import { create } from "zustand";
-
-function loadModule(path, imports) {
-	const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-	const { code } = transformSync(source, { loader: "ts", format: "cjs" });
-	const module = { exports: {} };
-	runInNewContext(code, {
-		module, exports: module.exports,
-		require: (name) => imports[name] ?? {},
-		console: { error() {} },
-	});
-	return module.exports;
-}
-
-function setup(raw) {
-	let nextId = 0;
-	const writes = [];
-	const notices = [];
-	const store = loadModule("src/stores/SubgroupStore.ts", {
-		zustand: { create },
-		nanoid: { nanoid: () => `subgroup-${++nextId}` },
-		obsidian: { Notice: class { constructor(message) { notices.push(message); } } },
-		"src/constants/StorageKeys": { STORAGE_KEYS: { SUBGROUPS: "subgroups" } },
-		"./LocalStorageService": { localStorageService: {
-			save: (_key, data) => writes.push(JSON.stringify(data)),
-		} },
-	});
-	store.hydrateSubgroups({ loadLocalStorage: () => raw });
-	return { ...store, state: () => store.useSubgroups.getState(), writes, notices };
-}
+import { loadModule, setup } from "./subgroup-fixtures.mjs";
 
 test("membership and header order survive hydration without storing tab order", () => {
 	const first = setup();
@@ -111,4 +79,156 @@ test("renaming trims whitespace and retains the name for empty input", () => {
 	state().rename(id, "  Updated  ");
 	state().rename(id, "  ");
 	assert.equal(state().data.subgroupsByGroup.group[0].title, "Updated");
+});
+
+function setupMoves(realNativeMoves = false) {
+	const store = setup();
+	const source = { id: "source", children: [] };
+	const target = { id: "target", children: [] };
+	const leaves = new Map();
+	for (const parent of [source, target]) {
+		parent.selectTabIndex = () => {};
+		parent.selectTab = () => {};
+		parent.recomputeChildrenDimensions = () => {};
+		parent.detach = () => { parent.detached = true; };
+	}
+	for (const [id, parent] of [["a", source], ["b", source], ["c", target]]) {
+		const leaf = { id, parent };
+		leaf.setParent = (nextParent) => { leaf.parent = nextParent; };
+		leaf.getEphemeralState = () => ({});
+		leaf.setEphemeralState = () => {};
+		parent.children.push(leaf);
+		leaves.set(id, leaf);
+	}
+	const nativeCalls = [];
+	const app = { workspace: {
+		layoutReady: true,
+		getLeafById: (id) => leaves.get(id) ?? null,
+		iterateAllLeaves: (callback) => leaves.forEach(callback),
+		onLayoutChange: () => service.reconcileSubgroups(app),
+	} };
+	let service;
+	let failAfterFirst = false;
+	function move(ids, parent, beforeId) {
+		nativeCalls.push([...ids]);
+		const moved = [];
+		for (const id of ids) {
+			const leaf = leaves.get(id);
+			leaf.parent.children = leaf.parent.children.filter((entry) => entry !== leaf);
+			leaf.parent = parent;
+			const index = beforeId ? parent.children.findIndex((entry) => entry.id === beforeId) : -1;
+			parent.children.splice(index < 0 ? parent.children.length : index, 0, leaf);
+			moved.push(leaf);
+			service.reconcileSubgroups(app); // Synchronous native layout-change.
+			if (failAfterFirst) throw new Error("native move interrupted");
+		}
+		return moved;
+	}
+	const nativeMoves = realNativeMoves ? loadModule("src/services/MoveTab.ts", {
+		"src/stores/TabCacheStore": { tabCacheStore: { getState: () => ({ groupIDs: [source.id, target.id] }) } },
+		"src/constants/Timeouts": { REFRESH_TIMEOUT_LONG: 100 },
+	}, { window: { setTimeout: (callback) => callback() } }) : {
+		moveTabToEnd: (_app, id, parent) => move([id], parent)[0],
+		moveMultipleTabsToEnd: (_app, ids, parent) => move(ids, parent),
+		moveTab: (_app, id, targetId) => move([id], leaves.get(targetId).parent, targetId)[0],
+		moveMultipleTabs: (_app, ids, targetId) => move(ids, leaves.get(targetId).parent, targetId),
+	};
+	service = loadModule("src/services/Subgroups.ts", {
+		"src/stores/SubgroupStore": store,
+		"src/models/PluginContext": { useSettings: { getState: () => ({ ephemeralTabs: false }) } },
+		"./MoveTab": nativeMoves,
+	});
+	return { ...store, service, app, source, target, nativeCalls, leaves,
+		fail: () => { failAfterFirst = true; } };
+}
+
+test("a header drop in the same parent changes membership without any native move", async () => {
+	const { state, service, app, source, nativeCalls } = setupMoves();
+	const id = state().create(source.id);
+	await service.moveTabsIntoSubgroup(app, ["a", "b"], source, id);
+	assert.equal(nativeCalls.length, 0, "even the last leaves must not be detached and reinserted");
+	assert.equal(source.children.length, 2);
+	assert.equal(state().data.subgroupByLeaf.a, id);
+	assert.equal(state().data.subgroupByLeaf.b, id);
+});
+
+test("the real native end-move transfers the final subgroup leaves and detaches only the source parent", async () => {
+	const { state, service, app, source, target } = setupMoves(true);
+	const id = state().create(source.id, "Work", ["b", "a"]);
+	await service.moveSubgroupToGroup(app, id, target);
+	assert.equal(source.children.length, 0);
+	assert.equal(source.detached, true);
+	assert.equal(target.detached, undefined);
+	assert.equal(target.children.map((leaf) => leaf.id).join(","), "c,a,b");
+	assert.equal(state().data.subgroupByLeaf.a, id);
+	assert.equal(state().data.subgroupByLeaf.b, id);
+});
+
+test("cross-group drop moves only foreign leaves and protects membership during layout events", async () => {
+	const { state, service, app, target, nativeCalls } = setupMoves();
+	const id = state().create(target.id);
+	await service.moveTabsIntoSubgroup(app, ["a", "b", "c"], target, id);
+	assert.equal(JSON.stringify(nativeCalls), '[["a","b"]]');
+	for (const leaf of target.children) assert.equal(state().data.subgroupByLeaf[leaf.id], id);
+});
+
+test("whole-subgroup transfer reuses native movement and keeps the subgroup intact", async () => {
+	const { state, service, app, source, target, nativeCalls } = setupMoves();
+	const id = state().create(source.id, "Work", ["a", "b"]);
+	state().setCollapsed(id, true);
+	await service.moveSubgroupToGroup(app, id, target);
+	assert.equal(source.children.length, 0);
+	assert.equal(nativeCalls.length, 1);
+	assert.equal(state().data.subgroupsByGroup.target[0].collapsed, true);
+	assert.equal(state().data.subgroupByLeaf.a, id);
+	assert.equal(state().data.subgroupByLeaf.b, id);
+});
+
+test("empty header transfers do not invoke native movement", async () => {
+	const { state, service, app, source, target, nativeCalls } = setupMoves();
+	const id = state().create(source.id);
+	await service.moveSubgroupToGroup(app, id, target);
+	assert.equal(nativeCalls.length, 0);
+	assert.equal(state().data.subgroupsByGroup.target[0].id, id);
+});
+
+test("partial transfer failure keeps remaining membership and exposes moved tabs ungrouped", async () => {
+	const { state, service, app, source, target, fail } = setupMoves();
+	const id = state().create(source.id, "Work", ["a", "b"]);
+	fail();
+	await assert.rejects(service.moveSubgroupToGroup(app, id, target));
+	assert.equal(state().data.subgroupByLeaf.a, undefined);
+	assert.equal(state().data.subgroupByLeaf.b, id);
+	assert.equal(state().data.subgroupsByGroup.source[0].id, id);
+});
+
+test("refresh before layout-ready leaves saved membership untouched", () => {
+	const { state, service, app, source } = setupMoves();
+	const id = state().create(source.id, "Work", ["not-yet-loaded"]);
+	app.workspace.layoutReady = false;
+	service.reconcileSubgroups(app);
+	assert.equal(state().data.subgroupByLeaf["not-yet-loaded"], id);
+	app.workspace.layoutReady = true;
+	service.reconcileSubgroups(app);
+	assert.equal(state().data.subgroupByLeaf["not-yet-loaded"], undefined);
+});
+
+test("native sorting changes filtered order without changing membership or writing subgroup data", () => {
+	const { state, source, writes, getLeafSubgroup } = setupMoves();
+	const id = state().create(source.id, "Work", ["a", "b"]);
+	const count = writes.length;
+	source.children.reverse();
+	const filtered = source.children.filter((leaf) => getLeafSubgroup(state().data, leaf.id, source.id) === id);
+	assert.equal(filtered.map((leaf) => leaf.id).join(","), "b,a");
+	assert.equal(writes.length, count);
+});
+
+test("the group end slot retains native reorder behavior without detaching the last leaves", async () => {
+	const { state, service, app, source, nativeCalls } = setupMoves();
+	const id = state().create(source.id, "Work", ["a", "b"]);
+	await service.moveTabsIntoSubgroup(app, ["a"], source, id, undefined, true);
+	assert.equal(source.children.map((leaf) => leaf.id).join(","), "b,a");
+	assert.equal(nativeCalls.length, 1);
+	await service.moveTabsIntoSubgroup(app, ["a", "b"], source, id, undefined, true);
+	assert.equal(nativeCalls.length, 1);
 });
