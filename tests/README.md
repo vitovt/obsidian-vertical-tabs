@@ -1,4 +1,4 @@
-Run `npm ci`, then `npm test` for the typing and active-tab scrolling regressions.
+Run `npm ci`, then `npm test` for the subgroup, typing, and active-tab scrolling regressions.
 The tests run the TypeScript source with fake Obsidian events, DOM rectangles,
 timers, and animation frames; they check work counts, not browser frame times.
 
@@ -18,3 +18,27 @@ To verify performance in Obsidian:
 Compare callback counts, layout time, and tasks over 16.7 ms against the original
 trace under the same settings and workspace. Automated tests cannot establish
 the resulting frame times in a live Obsidian workspace.
+
+Subgroup tests exercise membership persistence, invalid-record recovery,
+external tab movement, interrupted transfers, native sorting, and server
+rendering of the real navigation tree. They exercise both the move adapter and
+the real native end-move code with fake workspace objects; these tests do not
+prove compatibility with a running Obsidian workspace.
+
+To verify subgroups in Obsidian:
+
+1. Create two subgroups, rename them, add tabs, and leave one subgroup empty.
+   Collapse a subgroup and confirm its active tab stays open in the same pane.
+2. Sort the real group, then drag a tab onto a subgroup header and before another
+   tab. Check that membership survives sorting and indices still follow the native
+   tab order. Repeat with multiple selected tabs and a collapsed target.
+3. Move tabs and an entire subgroup between existing groups. Include the last
+   tabs of the source group, an empty subgroup, and a popout window.
+4. Open, close, and move tabs using Obsidian's horizontal strip. External moves
+   should clear old membership; reusing a tab for another file should keep it.
+5. Restart Obsidian with the same workspace, then disable/re-enable the plugin.
+   Check restored names, membership, header order, and collapse state, including
+   two leaves showing the same file.
+6. Delete a subgroup and verify all its tabs stay open. Repeat on mobile with
+   drag handles and context menus, with the single-group header hidden, and with
+   auto-uncollapse, Zen mode, and alternate group views enabled.

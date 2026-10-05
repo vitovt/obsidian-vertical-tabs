@@ -14,6 +14,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { IconButton } from "./IconButton";
 import { Identifier } from "src/models/VTWorkspace";
 import { ViewCueIndex } from "src/models/ViewState";
+import { NavigationDragData } from "src/models/NavigationDrag";
 
 interface NavigationTreeItemProps {
 	id: Identifier | null;
@@ -22,6 +23,9 @@ interface NavigationTreeItemProps {
 	icon: string;
 	webviewIcon?: string;
 	isTab: boolean;
+	isSubgroup?: boolean;
+	dragData?: NavigationDragData;
+	dragDisabled?: boolean;
 	isEphemeralTab?: boolean;
 	isTabSlot?: boolean;
 	isLinkedGroupBtn?: boolean;
@@ -61,8 +65,15 @@ export const NavigationTreeItem = forwardRef<
 	const { attributes, listeners, setNodeRef, isDragging, isOver } =
 		useSortable({
 			id: props.id ?? "",
-			data: { isTab: props.isTab && !props.isTabSlot },
-			disabled: !props.id || props.isTabSlot || props.isGroupSlot,
+			data: props.dragData ?? {
+				kind: props.isTab ? "tab" : "group",
+				groupId: props.isTab ? undefined : props.id ?? undefined,
+				leafId: props.isTab ? props.id ?? undefined : undefined,
+			},
+			disabled: {
+				draggable: !props.id || props.isTabSlot || props.isGroupSlot || props.dragDisabled || props.isRenaming,
+				droppable: !props.id || props.dragDisabled || props.isRenaming,
+			},
 		});
 
 	const iconEl = useRef<HTMLDivElement>(null);
@@ -73,6 +84,7 @@ export const NavigationTreeItem = forwardRef<
 		"is-tab": props.isTab,
 		"is-ephemeral-tab": props.isTab && props.isEphemeralTab,
 		"is-group": !props.isTab,
+		"is-subgroup": props.isSubgroup,
 		"nav-folder": !props.isTab,
 		"is-pinned": props.isPinned,
 		"is-collapsed": props.isCollapsed,

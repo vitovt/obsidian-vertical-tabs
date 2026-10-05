@@ -77,6 +77,7 @@ import { getGroupTitle, setGroupTitle } from "src/services/Customization";
 import { EVENTS } from "src/constants/Events";
 import { createVTMenu } from "src/services/Menu";
 import { runWithCanSplit } from "src/services/PlatformCanSplit";
+import { addSubgroupTabMenu } from "src/services/Subgroups";
 
 interface TabProps {
 	leaf: WorkspaceLeaf;
@@ -443,9 +444,14 @@ export const Tab = memo(function Tab(props: TabProps) {
 
 	/* Menu */
 	const buildMenu = (includeGroupViewControls = true) => {
-		if (hasAnySelectedTabs) return; // TODO: multi-select menu
+		if (hasAnySelectedTabs) {
+			const menu = createVTMenu("vt-selected-tabs-menu");
+			addSubgroupTabMenu(app, menu, isSelected ? getSelectedTabs() : [leaf.id]);
+			return menu;
+		}
 		/* Menu */
 		const menu = createVTMenu("vt-tab-menu");
+		addSubgroupTabMenu(app, menu, [leaf.id]);
 		// Bookmark
 		// TODO: Add customizable title support for bookmarks
 		menu.addItem((item) => {
@@ -521,7 +527,7 @@ export const Tab = memo(function Tab(props: TabProps) {
 		});
 		menu.addItem((item) => {
 			item.setSection("close")
-				.setTitle("Close others")
+				.setTitle("Close others in group")
 				.onClick(() => {
 					closeOthersInGroup(app, leaf);
 					makeLeafNonEphemeral(leaf);
@@ -530,19 +536,19 @@ export const Tab = memo(function Tab(props: TabProps) {
 		});
 		menu.addItem((item) => {
 			item.setSection("close")
-				.setTitle("Close tabs to the top")
+				.setTitle("Close preceding tabs (tab order)")
 				.onClick(() => closeTabsToTopInGroup(app, leaf));
 			item.VTMenuAction = "close-tabs-to-top";
 		});
 		menu.addItem((item) => {
 			item.setSection("close")
-				.setTitle("Close tabs to the bottom")
+				.setTitle("Close following tabs (tab order)")
 				.onClick(() => closeTabsToBottomInGroup(app, leaf));
 			item.VTMenuAction = "close-tabs-to-bottom";
 		});
 		menu.addItem((item) => {
 			item.setSection("close")
-				.setTitle("Close all")
+				.setTitle("Close all in group")
 				.setDisabled(isPinned)
 				.onClick(() => leaf.parent.detach());
 			item.VTMenuAction = "close-all";

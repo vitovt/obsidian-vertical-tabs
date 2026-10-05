@@ -14,6 +14,23 @@ Productive users of Obsidian often find themselves juggling a large number of op
 
 Vertical Tabs offers a solution by introducing a vertical list of tabs, allowing users to [group](https://vertical-tabs-docs.oxdc.dev/Features/tab-groups) and [organize](https://vertical-tabs-docs.oxdc.dev/User-Guide/Basic-Usage/navigation) tabs for more efficient navigation.
 
+## Subgroups
+
+Choose **New subgroup** inside a tab group to organize its tabs without creating
+another split pane. Rename or collapse a subgroup from its header. Drag tabs onto
+the header, or use **Move to subgroup…** in a tab's context menu; selected tabs
+can also form a new subgroup. Drag subgroup headers to reorder them, or move a
+subgroup into another existing group to move its tabs with it. Subgroups have
+one level of nesting and are saved locally for this vault on this device.
+
+Tabs without a subgroup appear first. Each subgroup shows its tabs in Obsidian's
+tab order, so normal sorting still applies across the whole group. Keyboard
+indices, Shift selection, and commands that close preceding/following tabs also
+use that tab order, including tabs in collapsed subgroups. **Delete subgroup
+(keep tabs)** removes the organization while leaving every tab open. Empty
+subgroups remain available for reuse. **Reset customization** clears subgroups;
+resetting settings keeps them.
+
 As *the* workspace manager for Obsidian, Vertical Tabs provides many handy features like [per-tab zooming](https://vertical-tabs-docs.oxdc.dev/Features/per-tab-zooming), [zen mode](https://vertical-tabs-docs.oxdc.dev/Features/zen-mode), [tab history browser](https://vertical-tabs-docs.oxdc.dev/Features/tab-history-browser), and an [extended keyboard tab switcher](https://vertical-tabs-docs.oxdc.dev/Features/extended-keyboard-tab-switcher). Additionally, it supports [advanced tab navigation](https://vertical-tabs-docs.oxdc.dev/Features/advanced-tab-navigation) with customizable presets, such as [IDE mode](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/IDE-mode), which delivers a VSCode-like experience with [ephemeral tabs](https://vertical-tabs-docs.oxdc.dev/Features/ephemeral-tabs) and automatic [tab deduplication](https://vertical-tabs-docs.oxdc.dev/Features/tab-deduplication). Users can also create personalized [tab navigation strategies](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/custom-strategy) for finer control.
 
 <p align="center" style="text-align: center;">

@@ -1,0 +1,13 @@
+.obsidian-vertical-tabs-container {
+	.tree-item.is-subgroup {
+		&.is-active-group > .tree-item-self {
+			color: var(--text-accent);
+		}
+	}
+	.tree-item.is-new-subgroup > .tree-item-self {
+		color: var(--text-muted);
+	}
+	&.is-dragging-subgroup .tree-item.is-subgroup.vt-is-being-dragged-over::before {
+		background: var(--interactive-accent);
+	}
+}

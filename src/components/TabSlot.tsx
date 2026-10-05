@@ -45,6 +45,7 @@ export const TabSlot = ({ group, groupID }: TabSlotProps) => {
 			id={`slot-${groupID}`}
 			isTab={true}
 			isTabSlot={true}
+			dragData={{ kind: "tab-slot", groupId: groupID }}
 			onClick={onClick}
 		/>
 	);

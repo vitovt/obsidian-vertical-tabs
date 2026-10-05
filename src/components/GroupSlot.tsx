@@ -23,6 +23,7 @@ export const GroupSlot = () => {
 			id={`slot-new`}
 			isTab={false}
 			isGroupSlot={true}
+			dragData={{ kind: "new-group" }}
 			onClick={() => void createLeafNewGroupAndOpen()}
 		/>
 	);
