@@ -104,7 +104,13 @@ function setupMoves(realNativeMoves = false) {
 	const app = { workspace: {
 		layoutReady: true,
 		getLeafById: (id) => leaves.get(id) ?? null,
-		iterateAllLeaves: (callback) => leaves.forEach(callback),
+		iterateAllLeaves: (callback) => {
+			// All fixture leaves share the main workspace tree. Obsidian stops
+			// traversing a tree when a leaf callback returns a truthy value.
+			for (const leaf of leaves.values()) {
+				if (callback(leaf)) break;
+			}
+		},
 		onLayoutChange: () => service.reconcileSubgroups(app),
 	} };
 	let service;
@@ -150,6 +156,38 @@ test("a header drop in the same parent changes membership without any native mov
 	assert.equal(source.children.length, 2);
 	assert.equal(state().data.subgroupByLeaf.a, id);
 	assert.equal(state().data.subgroupByLeaf.b, id);
+});
+
+test("adding tabs one at a time retains all subgroup members after refresh and reload", async () => {
+	const { state, service, app, source, writes } = setupMoves();
+	const id = state().create(source.id);
+	for (const leafId of ["b", "a"]) {
+		await service.moveTabsIntoSubgroup(app, [leafId], source, id);
+		service.reconcileSubgroups(app);
+		assert.equal(state().data.subgroupByLeaf.b, id);
+	}
+	assert.equal(state().data.subgroupByLeaf.a, id);
+	const restored = setup(writes.at(-1));
+	assert.equal(restored.state().data.subgroupByLeaf.a, id);
+	assert.equal(restored.state().data.subgroupByLeaf.b, id);
+});
+
+test("multiple subgroups retain independent members across native groups", async () => {
+	const { state, service, app, source, target } = setupMoves();
+	const one = state().create(source.id, "One");
+	const two = state().create(source.id, "Two");
+	const three = state().create(target.id, "Three");
+	await service.moveTabsIntoSubgroup(app, ["a"], source, one);
+	await service.moveTabsIntoSubgroup(app, ["b"], source, two);
+	await service.moveTabsIntoSubgroup(app, ["c"], target, three);
+	service.reconcileSubgroups(app);
+	assert.equal(state().data.subgroupByLeaf.a, one);
+	assert.equal(state().data.subgroupByLeaf.b, two);
+	assert.equal(state().data.subgroupByLeaf.c, three);
+	await service.moveTabsIntoSubgroup(app, ["a"], source, two, "b");
+	assert.equal(state().data.subgroupByLeaf.a, two);
+	assert.equal(state().data.subgroupByLeaf.b, two);
+	assert.equal(state().data.subgroupByLeaf.c, three);
 });
 
 test("the real native end-move transfers the final subgroup leaves and detaches only the source parent", async () => {
