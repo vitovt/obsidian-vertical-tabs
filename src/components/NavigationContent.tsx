@@ -24,6 +24,7 @@ import {
 	reportSubgroupError, withSubgroupMove,
 } from "src/services/Subgroups";
 import { NavigationTreeItem } from "./NavigationTreeItem";
+import { ArchivePanel } from "./ArchivePanel";
 
 export const NavigationContent = () => {
 	const groupIDs = tabCacheStore((state) => state.groupIDs);
@@ -153,6 +154,7 @@ export const NavigationContent = () => {
 					{createPortal(<DragOverlay />, activeDocument.body)}
 				</DndContext>
 			</div>
+			<ArchivePanel />
 		</div>
 	);
 };

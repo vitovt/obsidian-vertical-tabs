@@ -15,6 +15,7 @@ import { safeDetach } from "./CloseTabs";
 import { linkTasksStore } from "src/stores/LinkTaskStore";
 import { tabCacheStore } from "src/stores/TabCacheStore";
 import { isMobileDrawerOpen } from "./MobileDrawer";
+import { useArchive } from "src/stores/ArchiveStore";
 
 const INCLUDE_LIST = new Set([
 	"markdown",
@@ -158,6 +159,9 @@ export function deduplicateExistingTabs(
 	app: App,
 	overrideSameGroupPolicy = false
 ) {
+	// Restore assigns view states and subgroup membership across asynchronous
+	// loads. Do not detach or move those leaves halfway through the operation.
+	if (useArchive.getState().busyIds.some((id) => id.startsWith("restore:"))) return;
 	const openFiles: TFile[] = [];
 	let hasLinkedLeaf = false;
 	app.workspace.iterateAllLeaves((leaf) => {

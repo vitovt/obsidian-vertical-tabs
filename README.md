@@ -32,6 +32,32 @@ subgroups remain available for reuse. The subgroup's **Close** button removes
 the subgroup and closes all its tabs, including pinned and non-file tabs.
 **Reset customization** clears subgroups; resetting settings keeps them.
 
+## Archive
+
+Use **Archive** on a file tab or subgroup to save bookmarks in the **Archive**
+section below the open tabs, then close the originals. Archiving a subgroup
+saves its file tabs in native order and closes all members, including non-file
+tabs. Standalone tabs without a file cannot be archived. No vault files are
+deleted by archiving, closing, or deleting an archive entry.
+
+Click an archived tab to open it in the current tab group without subgroup
+membership. Expand an archived subgroup to open an individual tab, or click its
+title to restore the whole subgroup in the current group without adding a split
+pane. File view states, pinned status, tab customization, and subgroup collapse
+state are restored. Normal sorting and deduplication settings still apply;
+when deduplication is enabled, matching open tabs are reused.
+
+By default, successfully restored bookmarks are removed from the archive;
+opening one child removes only that bookmark. Enable **Keep restored items in
+archive** to reuse them as bookmarks. Missing files and failed restores remain
+in the archive. The **Delete from archive** buttons and context-menu actions
+remove only bookmarks; they do not close open tabs or delete files.
+
+The archive is saved locally for this vault on this device and survives an
+Obsidian restart. File and folder renames in the vault update saved paths.
+**Reset archive** clears only bookmarks; **Reset everything** also clears them.
+Resetting plugin settings or customization keeps the archive.
+
 As *the* workspace manager for Obsidian, Vertical Tabs provides many handy features like [per-tab zooming](https://vertical-tabs-docs.oxdc.dev/Features/per-tab-zooming), [zen mode](https://vertical-tabs-docs.oxdc.dev/Features/zen-mode), [tab history browser](https://vertical-tabs-docs.oxdc.dev/Features/tab-history-browser), and an [extended keyboard tab switcher](https://vertical-tabs-docs.oxdc.dev/Features/extended-keyboard-tab-switcher). Additionally, it supports [advanced tab navigation](https://vertical-tabs-docs.oxdc.dev/Features/advanced-tab-navigation) with customizable presets, such as [IDE mode](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/IDE-mode), which delivers a VSCode-like experience with [ephemeral tabs](https://vertical-tabs-docs.oxdc.dev/Features/ephemeral-tabs) and automatic [tab deduplication](https://vertical-tabs-docs.oxdc.dev/Features/tab-deduplication). Users can also create personalized [tab navigation strategies](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/custom-strategy) for finer control.
 
 <p align="center" style="text-align: center;">

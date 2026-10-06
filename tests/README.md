@@ -31,6 +31,10 @@ Obsidian workspace.
 Archive storage tests cover restart persistence, individual bookmark removal,
 file and folder renames, invalid saved records, and failed writes. Archive
 updates are published only after the persistent write succeeds.
+Archive service tests cover mixed file/service subgroups, partial restores,
+current-group placement, deduplication, repeat clicks, and both retention modes.
+Archive rendering tests cover collapse states and independent bookmark/subgroup
+delete controls without registering native tab indices or drag targets.
 
 To verify subgroups in Obsidian:
 
@@ -52,3 +56,22 @@ To verify subgroups in Obsidian:
 6. Delete a subgroup and verify all its tabs stay open. Repeat on mobile with
    drag handles and context menus, with the single-group header hidden, and with
    auto-uncollapse, Zen mode, and alternate group views enabled.
+
+To verify the archive in Obsidian:
+
+1. Archive a Markdown tab, Canvas, and PDF, including a pinned and deferred tab.
+   Confirm tabs close and bookmarks appear below open groups. Restart Obsidian
+   and check that archive entries and collapse states survive.
+2. Archive a subgroup containing files and a search tab. Confirm all its members
+   close, only the file bookmarks appear in the archive, and other tabs stay open.
+3. Click one archived subgroup child. Confirm it opens in the current group
+   outside any subgroup and only that child is consumed. Click the remaining
+   subgroup title and confirm it restores together without creating a split.
+4. Enable Keep restored items in archive and repeat with a tab and subgroup.
+   Test with deduplication on and off, and restore into another current group.
+5. Rename a file and its containing folder while the plugin is enabled, then
+   reopen its bookmark. Delete a file or disable its viewer plugin and confirm
+   failed bookmarks stay available while successful siblings restore.
+6. Delete individual archive bookmarks and whole archived subgroups with the
+   buttons and menus. Confirm neither files nor already open tabs are changed.
+   Repeat on mobile, with an empty archive, and with the archive collapsed.

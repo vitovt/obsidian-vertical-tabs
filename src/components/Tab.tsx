@@ -78,6 +78,8 @@ import { EVENTS } from "src/constants/Events";
 import { createVTMenu } from "src/services/Menu";
 import { runWithCanSplit } from "src/services/PlatformCanSplit";
 import { addSubgroupTabMenu } from "src/services/Subgroups";
+import { addArchiveTabMenu, archiveTabs, reportArchiveError } from "src/services/Archive";
+import { useArchive } from "src/stores/ArchiveStore";
 
 interface TabProps {
 	leaf: WorkspaceLeaf;
@@ -146,6 +148,9 @@ export const Tab = memo(function Tab(props: TabProps) {
 	const isSelected = isTabSelected(leaf.id);
 	const hasAnySelectedTabs = hasSelectedTabs();
 	const activeFileTick = useViewState((state) => state.activeFileTick);
+	const archiveDisabled = useArchive((state) => state.readOnly || state.busyIds.includes(`archive-tab:${leaf.id}`));
+	const canArchive = !!getOpenFileOfLeaf(app, leaf);
+	const archive = () => void archiveTabs(app, [leaf.id]).catch(reportArchiveError);
 
 	/* Derived states */
 	const isActiveTab = lastActiveLeaf?.id === leaf.id;
@@ -446,11 +451,13 @@ export const Tab = memo(function Tab(props: TabProps) {
 	const buildMenu = (includeGroupViewControls = true) => {
 		if (hasAnySelectedTabs) {
 			const menu = createVTMenu("vt-selected-tabs-menu");
+			addArchiveTabMenu(app, menu, isSelected ? getSelectedTabs() : [leaf.id]);
 			addSubgroupTabMenu(app, menu, isSelected ? getSelectedTabs() : [leaf.id]);
 			return menu;
 		}
 		/* Menu */
 		const menu = createVTMenu("vt-tab-menu");
+		addArchiveTabMenu(app, menu, [leaf.id]);
 		addSubgroupTabMenu(app, menu, [leaf.id]);
 		// Bookmark
 		// TODO: Add customizable title support for bookmarks
@@ -942,6 +949,9 @@ export const Tab = memo(function Tab(props: TabProps) {
 
 	const toolbar = (
 		<Fragment>
+			{!isEditing && <IconButton icon="archive" action="archive"
+				tooltip={canArchive ? "Archive tab" : "Only file tabs can be archived"}
+				disabled={archiveDisabled || !canArchive} onClick={archive} />}
 			{!isEditing && isPinned && (
 				<IconButton
 					icon="pin"

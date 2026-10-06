@@ -29,6 +29,7 @@ test("the navigation tree filters native order, preserves indices and renders em
 		react: React, "react/jsx-runtime": jsxRuntime,
 		obsidian: { Platform: { isMobile: false } },
 		"src/stores/SubgroupStore": renderStore,
+		"src/stores/ArchiveStore": { useArchive: (selector) => selector({ readOnly: false, busyIds: [] }) },
 		"src/stores/TabCacheStore": { tabCacheStore: cache },
 		"src/models/PluginContext": {
 			useApp: () => ({}),
@@ -54,6 +55,7 @@ test("the navigation tree filters native order, preserves indices and renders em
 		"./IconButton": { IconButton: () => null },
 		"./Group": { Group: ({ children }) => children(false, "default") },
 		"./GroupSlot": { GroupSlot: () => null },
+		"./ArchivePanel": { ArchivePanel: () => null },
 		"./TabSlot": { TabSlot: () => null },
 		"./Tab": { Tab: ({ leaf, index, isLast }) => React.createElement("div", {
 			"data-leaf": leaf.id, "data-index": index, "data-last": String(isLast),
