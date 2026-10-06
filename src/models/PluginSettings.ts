@@ -41,6 +41,9 @@ interface ObsidianVerticalTabsSettings {
 	newTabButtonPlacement: NewTabButtonPlacement;
 	tabClosingBehavior: TabClosingBehavior;
 	keepArchiveAfterRestore: boolean;
+	confirmCloseSubgroup: boolean;
+	confirmDeleteArchivedSubgroup: boolean;
+	confirmDeleteArchivedTab: boolean;
 }
 
 export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
@@ -82,6 +85,9 @@ export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
 	newTabButtonPlacement: NewTabButtonPlacement.GroupToolbar,
 	tabClosingBehavior: TabClosingBehavior.ActiveRight,
 	keepArchiveAfterRestore: false,
+	confirmCloseSubgroup: false,
+	confirmDeleteArchivedSubgroup: false,
+	confirmDeleteArchivedTab: false,
 };
 
 export type Settings = ObsidianVerticalTabsSettings;

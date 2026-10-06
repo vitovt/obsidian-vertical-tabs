@@ -10,6 +10,7 @@ import { getOpenFileOfLeaf } from "./GetTabs";
 import { closeSubgroup, getSubgroupLeaves, moveTabsIntoSubgroup, withSubgroupMove } from "./Subgroups";
 import { makeLeafNonEphemeral } from "./EphemeralTabs";
 import { loadDeferredLeaf } from "./LoadDeferredLeaf";
+import { confirmAction } from "src/views/ConfirmActionModal";
 
 async function withArchiveAction(keys: string[], operation: () => Promise<void>): Promise<void> {
 	const store = useArchive.getState();
@@ -115,7 +116,7 @@ async function openArchivedTab(app: App, tab: ArchivedTab, file: TFile, target: 
 }
 
 export async function restoreArchiveEntry(app: App, id: string, tabId?: string): Promise<void> {
-	await withArchiveAction([`restore:${id}`], async () => {
+	await withArchiveAction([`entry:${id}`, `restore:${id}`], async () => {
 		const entry = useArchive.getState().data.entries.find((item) => item.id === id);
 		if (!entry) return;
 		const restoreSubgroup = entry.kind === "subgroup" && tabId === undefined;
@@ -156,6 +157,26 @@ export async function restoreArchiveEntry(app: App, id: string, tabId?: string):
 			}
 			if (failed) new Notice(`Vertical Tabs: ${failed} archive item(s) could not be restored. Their bookmarks have been kept.`);
 		});
+	});
+}
+
+export async function deleteArchiveEntry(app: App, id: string, tabId?: string): Promise<void> {
+	await withArchiveAction([`entry:${id}`], async () => {
+		const entry = useArchive.getState().data.entries.find((item) => item.id === id);
+		if (!entry) return;
+		const subgroup = entry.kind === "subgroup" && tabId === undefined;
+		const tab = entry.kind === "tab" ? entry : entry.tabs.find((tab) => tab.id === tabId);
+		if (!subgroup && !tab) return;
+		const settings = useSettings.getState();
+		const ask = subgroup ? settings.confirmDeleteArchivedSubgroup : settings.confirmDeleteArchivedTab;
+		if (ask && !await confirmAction(app, {
+			title: subgroup ? "Delete archived subgroup?" : "Delete archived bookmark?", confirmText: "Delete from archive",
+			message: subgroup
+				? `Delete “${entry.title}” and all its bookmarks from the archive? Files and open tabs will stay unchanged.`
+				: `Delete “${tab?.title ?? entry.title}” from the archive? The file and open tabs will stay unchanged.`,
+		})) return;
+		if (tabId) useArchive.getState().removeTabs(id, [tabId]);
+		else useArchive.getState().remove(id);
 	});
 }
 

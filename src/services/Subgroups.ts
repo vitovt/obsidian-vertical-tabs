@@ -8,6 +8,7 @@ import { makeLeafNonEphemeral } from "./EphemeralTabs";
 import { useSettings } from "src/models/PluginContext";
 import { runWithCanSplit } from "./PlatformCanSplit";
 import { useViewState } from "src/models/ViewState";
+import { confirmAction } from "src/views/ConfirmActionModal";
 
 let pendingMoves = 0;
 
@@ -55,6 +56,27 @@ export async function closeSubgroup(app: App, id: string) {
 		for (const leaf of getSubgroupLeaves(app, id)) leaf.detach();
 		useSubgroups.getState().remove(id);
 	});
+}
+
+const pendingCloses = new Set<string>();
+
+export async function requestCloseSubgroup(app: App, id: string) {
+	if (useSubgroups.getState().readOnly || pendingCloses.has(id)) return;
+	pendingCloses.add(id);
+	try {
+		const data = useSubgroups.getState().data;
+		const owner = getSubgroupOwner(data, id);
+		const subgroup = owner ? data.subgroupsByGroup[owner]?.find((entry) => entry.id === id) : undefined;
+		if (!subgroup) return;
+		const count = getSubgroupLeaves(app, id).length;
+		if (useSettings.getState().confirmCloseSubgroup && count > 1 && !await confirmAction(app, {
+			title: "Close subgroup?", confirmText: "Close subgroup",
+			message: `Close “${subgroup.title}” and all ${count} tabs? Files will stay in the vault.`,
+		})) return;
+		await closeSubgroup(app, id);
+	} finally {
+		pendingCloses.delete(id);
+	}
 }
 
 export async function moveTabsIntoSubgroup(

@@ -49,7 +49,7 @@ test("collapsed archive headers keep the restore control but hide their children
 test("a restore in progress disables both reopening and removing that record", () => {
 	const store = setupArchive();
 	store.state().add(archivedTab("one", "One.md"));
-	store.state().setBusy("restore:one", true);
+	store.state().setBusy("entry:one", true);
 	const html = renderArchive(store);
 	assert.match(html, /title="One.md" disabled=""/);
 	assert.match(html, /title="Delete bookmark from archive" disabled=""/);

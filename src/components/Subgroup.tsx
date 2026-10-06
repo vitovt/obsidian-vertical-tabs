@@ -4,7 +4,7 @@ import { useApp, useSettings } from "src/models/PluginContext";
 import { Subgroup as SubgroupModel, useSubgroups } from "src/stores/SubgroupStore";
 import { useViewState } from "src/models/ViewState";
 import { createVTMenu } from "src/services/Menu";
-import { closeSubgroup, createSubgroupTab, moveSubgroupToGroup, reportSubgroupError } from "src/services/Subgroups";
+import { requestCloseSubgroup, createSubgroupTab, moveSubgroupToGroup, reportSubgroupError } from "src/services/Subgroups";
 import { tabCacheStore } from "src/stores/TabCacheStore";
 import { GroupType } from "src/models/VTWorkspace";
 import { getGroupTitle } from "src/services/Customization";
@@ -41,7 +41,7 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 	};
 	const startEditing = () => useSubgroups.getState().startEditing(subgroup.id);
 	const createTab = () => createSubgroupTab(app, group, subgroup.id);
-	const close = () => void closeSubgroup(app, subgroup.id).catch(reportSubgroupError);
+	const close = () => void requestCloseSubgroup(app, subgroup.id).catch(reportSubgroupError);
 	const archive = () => void archiveSubgroup(app, subgroup.id).catch(reportArchiveError);
 	const showToolbarTab = !alwaysOpenInNewTab &&
 		(placement === NewTabButtonPlacement.GroupToolbar || placement === NewTabButtonPlacement.Both);

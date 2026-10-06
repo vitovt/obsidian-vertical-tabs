@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { setIcon } from "obsidian";
 import { useApp } from "src/models/PluginContext";
 import { ArchivedTab, useArchive } from "src/stores/ArchiveStore";
-import { reportArchiveError, restoreArchiveEntry } from "src/services/Archive";
+import { deleteArchiveEntry, reportArchiveError, restoreArchiveEntry } from "src/services/Archive";
 import { createVTMenu } from "src/services/Menu";
 
 const ArchiveIcon = ({ icon }: { icon: string }) => {
@@ -32,11 +32,7 @@ export const ArchivePanel = () => {
 	const readOnly = useArchive((state) => state.readOnly);
 	const busyIds = useArchive((state) => state.busyIds);
 	const restore = (id: string, tabId?: string) => void restoreArchiveEntry(app, id, tabId).catch(reportArchiveError);
-	const remove = (id: string, tabId?: string) => {
-		if (readOnly || useArchive.getState().busyIds.includes(`restore:${id}`)) return;
-		if (tabId) useArchive.getState().removeTabs(id, [tabId]);
-		else useArchive.getState().remove(id);
-	};
+	const remove = (id: string, tabId?: string) => void deleteArchiveEntry(app, id, tabId).catch(reportArchiveError);
 	const menu = (id: string, tabId: string | undefined, disabled: boolean, subgroup = false) => {
 		const menu = createVTMenu("vt-archive-menu");
 		menu.addItem((item) => item.setTitle(subgroup ? "Restore subgroup" : "Open tab").setIcon("archive-restore")
@@ -47,7 +43,7 @@ export const ArchivePanel = () => {
 	};
 	const renderTab = (tab: ArchivedTab, parentId?: string) => {
 		const id = parentId ?? tab.id;
-		const disabled = readOnly || busyIds.includes(`restore:${id}`);
+		const disabled = readOnly || busyIds.includes(`entry:${id}`);
 		return <div key={tab.id} className="tree-item is-tab is-archived-tab" data-archive-id={tab.id}>
 			<div className="tree-item-self" onContextMenu={(event) => {
 				event.preventDefault();
@@ -75,7 +71,7 @@ export const ArchivePanel = () => {
 			{!entries.length && <p className="vt-archive-empty">No archived tabs yet.</p>}
 			{entries.map((entry) => {
 				if (entry.kind === "tab") return renderTab(entry);
-				const disabled = busyIds.includes(`restore:${entry.id}`);
+				const disabled = busyIds.includes(`entry:${entry.id}`);
 				return <div key={entry.id} className={`tree-item is-group is-archived-subgroup${entry.collapsed ? " is-collapsed" : ""}`}
 					data-archive-id={entry.id}>
 					<div className="tree-item-self" onContextMenu={(event) => {

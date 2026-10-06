@@ -10,8 +10,12 @@ export function setupArchiveService() {
 	const files = new Map();
 	const leaves = new Map();
 	const metadata = new Map();
-	const settings = { ephemeralTabs: true, keepArchiveAfterRestore: false };
+	const settings = { ephemeralTabs: true, keepArchiveAfterRestore: false,
+		confirmCloseSubgroup: false, confirmDeleteArchivedSubgroup: false, confirmDeleteArchivedTab: false };
 	const notices = [];
+	const confirmations = [];
+	let confirmResult = true;
+	let confirmGate;
 	let subgroupService;
 	let nextLeaf = 0;
 	let nextBookmark = 0;
@@ -90,11 +94,17 @@ export function setupArchiveService() {
 			app.workspace.onLayoutChange();
 			return leaf;
 		} },
+		"src/views/ConfirmActionModal": { confirmAction: async (_app, options) => {
+			confirmations.push(options);
+			return confirmGate ? await confirmGate : confirmResult;
+		} },
 	};
 	subgroupService = loadModule("src/services/Subgroups.ts", imports);
 	imports["./Subgroups"] = subgroupService;
 	const service = loadModule("src/services/Archive.ts", imports);
-	return { archive, subgroups, service, app, source, target, files, leaves, metadata, settings, notices, addLeaf, addFile,
+	return { archive, subgroups, service, subgroupService, app, source, target, files, leaves, metadata, settings, notices, confirmations, addLeaf, addFile,
+		answerConfirmation: (answer) => { confirmResult = answer; },
+		holdConfirmation: () => { let release; confirmGate = new Promise((resolve) => { release = resolve; }); return release; },
 		failOpen: (path) => { failPath = path; },
 		holdNextOpen: () => { let release; openGate = new Promise((resolve) => { release = resolve; }); return release; },
 	};

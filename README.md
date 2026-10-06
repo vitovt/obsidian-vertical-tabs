@@ -58,6 +58,12 @@ Obsidian restart. File and folder renames in the vault update saved paths.
 **Reset archive** clears only bookmarks; **Reset everything** also clears them.
 Resetting plugin settings or customization keeps the archive.
 
+Three independent settings can ask for confirmation: **Confirm closing
+subgroups** (only for more than one tab), **Confirm deleting archived
+subgroups**, and **Confirm deleting archived bookmarks** (including subgroup
+children). All are disabled by default. They apply to explicit close/delete
+buttons and menu actions; archiving and successful restoration do not prompt.
+
 As *the* workspace manager for Obsidian, Vertical Tabs provides many handy features like [per-tab zooming](https://vertical-tabs-docs.oxdc.dev/Features/per-tab-zooming), [zen mode](https://vertical-tabs-docs.oxdc.dev/Features/zen-mode), [tab history browser](https://vertical-tabs-docs.oxdc.dev/Features/tab-history-browser), and an [extended keyboard tab switcher](https://vertical-tabs-docs.oxdc.dev/Features/extended-keyboard-tab-switcher). Additionally, it supports [advanced tab navigation](https://vertical-tabs-docs.oxdc.dev/Features/advanced-tab-navigation) with customizable presets, such as [IDE mode](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/IDE-mode), which delivers a VSCode-like experience with [ephemeral tabs](https://vertical-tabs-docs.oxdc.dev/Features/ephemeral-tabs) and automatic [tab deduplication](https://vertical-tabs-docs.oxdc.dev/Features/tab-deduplication). Users can also create personalized [tab navigation strategies](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/custom-strategy) for finer control.
 
 <p align="center" style="text-align: center;">

@@ -75,3 +75,8 @@ To verify the archive in Obsidian:
 6. Delete individual archive bookmarks and whole archived subgroups with the
    buttons and menus. Confirm neither files nor already open tabs are changed.
    Repeat on mobile, with an empty archive, and with the archive collapsed.
+7. Enable each confirmation preference separately and try its button and menu
+   action. Cancel with the button and Escape and confirm no tabs or bookmarks
+   change. Accept and check only the requested action completes. Closing an
+   empty or one-tab subgroup should not prompt; archive deletion preferences
+   should not add prompts to successful restoration or archiving.

@@ -556,6 +556,24 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 			value: this.plugin.settings.keepArchiveAfterRestore,
 			onChange: (value) => useSettings.getState().setSettings({ keepArchiveAfterRestore: value }),
 		});
+		this.createToggle(containerEl, {
+			name: "Confirm closing subgroups",
+			desc: "Ask before closing a subgroup containing more than one tab.",
+			value: this.plugin.settings.confirmCloseSubgroup,
+			onChange: (value) => useSettings.getState().setSettings({ confirmCloseSubgroup: value }),
+		});
+		this.createToggle(containerEl, {
+			name: "Confirm deleting archived subgroups",
+			desc: "Ask before deleting a subgroup and all its bookmarks from the archive.",
+			value: this.plugin.settings.confirmDeleteArchivedSubgroup,
+			onChange: (value) => useSettings.getState().setSettings({ confirmDeleteArchivedSubgroup: value }),
+		});
+		this.createToggle(containerEl, {
+			name: "Confirm deleting archived bookmarks",
+			desc: "Ask before deleting an individual bookmark from the archive, including a subgroup child.",
+			value: this.plugin.settings.confirmDeleteArchivedTab,
+			onChange: (value) => useSettings.getState().setSettings({ confirmDeleteArchivedTab: value }),
+		});
 	}
 
 	private displayTabZoomOptions(containerEl: HTMLElement | SettingGroup) {
@@ -1565,6 +1583,21 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 						name: "Keep restored items in archive",
 						desc: "Keep archive entries as reusable bookmarks. When disabled, successfully restored items are removed from the archive.",
 						control: { type: "toggle", key: "keepArchiveAfterRestore" },
+					},
+					{
+						name: "Confirm closing subgroups",
+						desc: "Ask before closing a subgroup containing more than one tab.",
+						control: { type: "toggle", key: "confirmCloseSubgroup" },
+					},
+					{
+						name: "Confirm deleting archived subgroups",
+						desc: "Ask before deleting a subgroup and all its bookmarks from the archive.",
+						control: { type: "toggle", key: "confirmDeleteArchivedSubgroup" },
+					},
+					{
+						name: "Confirm deleting archived bookmarks",
+						desc: "Ask before deleting an individual bookmark from the archive, including a subgroup child.",
+						control: { type: "toggle", key: "confirmDeleteArchivedTab" },
 					},
 					{
 						name: "Enable tab zoom",
