@@ -28,8 +28,9 @@ tab order, so normal sorting still applies across the whole group. Keyboard
 indices, Shift selection, and commands that close preceding/following tabs also
 use that tab order, including tabs in collapsed subgroups. **Delete subgroup
 (keep tabs)** removes the organization while leaving every tab open. Empty
-subgroups remain available for reuse. **Reset customization** clears subgroups;
-resetting settings keeps them.
+subgroups remain available for reuse. The subgroup's **Close** button removes
+the subgroup and closes all its tabs, including pinned and non-file tabs.
+**Reset customization** clears subgroups; resetting settings keeps them.
 
 As *the* workspace manager for Obsidian, Vertical Tabs provides many handy features like [per-tab zooming](https://vertical-tabs-docs.oxdc.dev/Features/per-tab-zooming), [zen mode](https://vertical-tabs-docs.oxdc.dev/Features/zen-mode), [tab history browser](https://vertical-tabs-docs.oxdc.dev/Features/tab-history-browser), and an [extended keyboard tab switcher](https://vertical-tabs-docs.oxdc.dev/Features/extended-keyboard-tab-switcher). Additionally, it supports [advanced tab navigation](https://vertical-tabs-docs.oxdc.dev/Features/advanced-tab-navigation) with customizable presets, such as [IDE mode](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/IDE-mode), which delivers a VSCode-like experience with [ephemeral tabs](https://vertical-tabs-docs.oxdc.dev/Features/ephemeral-tabs) and automatic [tab deduplication](https://vertical-tabs-docs.oxdc.dev/Features/tab-deduplication). Users can also create personalized [tab navigation strategies](https://vertical-tabs-docs.oxdc.dev/User-Guide/Advanced/Tab-Navigation/custom-strategy) for finer control.
 

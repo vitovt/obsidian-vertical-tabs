@@ -36,6 +36,27 @@ export function promoteSubgroupTabs(leaves: WorkspaceLeaf[]) {
 	if (useSettings.getState().ephemeralTabs) leaves.forEach(makeLeafNonEphemeral);
 }
 
+export function getSubgroupLeaves(app: App, id: string): WorkspaceLeaf[] {
+	const data = useSubgroups.getState().data;
+	const owner = getSubgroupOwner(data, id);
+	if (!owner) return [];
+	return Object.entries(data.subgroupByLeaf)
+		.filter(([, subgroupId]) => subgroupId === id)
+		.map(([leafId]) => app.workspace.getLeafById(leafId))
+		.filter((leaf): leaf is WorkspaceLeaf => !!leaf && leaf.parent.id === owner)
+		.sort((a, b) => a.parent.children.indexOf(a) - b.parent.children.indexOf(b));
+}
+
+export async function closeSubgroup(app: App, id: string) {
+	if (useSubgroups.getState().readOnly) return;
+	await withSubgroupMove(app, () => {
+		// Snapshot the members before detaches emit layout-change events.
+		// An explicit subgroup close includes pinned and non-file tabs.
+		for (const leaf of getSubgroupLeaves(app, id)) leaf.detach();
+		useSubgroups.getState().remove(id);
+	});
+}
+
 export async function moveTabsIntoSubgroup(
 	app: App,
 	leafIds: string[],
@@ -100,7 +121,7 @@ export function createSubgroupTab(app: App, group: WorkspaceParent, subgroupId: 
 
 export function reportSubgroupError(error: unknown) {
 	console.error("[VerticalTabs] Subgroup operation failed:", error);
-	new Notice("Vertical Tabs: could not move all tabs. The list has been reconciled with the workspace.");
+	new Notice("Vertical Tabs: could not complete the subgroup action. The list has been reconciled with the workspace.");
 }
 
 export function addSubgroupTabMenu(app: App, menu: Menu, leafIds: string[]) {

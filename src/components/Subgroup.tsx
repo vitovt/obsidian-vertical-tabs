@@ -4,7 +4,7 @@ import { useApp, useSettings } from "src/models/PluginContext";
 import { Subgroup as SubgroupModel, useSubgroups } from "src/stores/SubgroupStore";
 import { useViewState } from "src/models/ViewState";
 import { createVTMenu } from "src/services/Menu";
-import { createSubgroupTab, moveSubgroupToGroup, reportSubgroupError } from "src/services/Subgroups";
+import { closeSubgroup, createSubgroupTab, moveSubgroupToGroup, reportSubgroupError } from "src/services/Subgroups";
 import { tabCacheStore } from "src/stores/TabCacheStore";
 import { GroupType } from "src/models/VTWorkspace";
 import { getGroupTitle } from "src/services/Customization";
@@ -38,6 +38,7 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 	};
 	const startEditing = () => useSubgroups.getState().startEditing(subgroup.id);
 	const createTab = () => createSubgroupTab(app, group, subgroup.id);
+	const close = () => void closeSubgroup(app, subgroup.id).catch(reportSubgroupError);
 	const showToolbarTab = !alwaysOpenInNewTab &&
 		(placement === NewTabButtonPlacement.GroupToolbar || placement === NewTabButtonPlacement.Both);
 	const showSlotTab = !alwaysOpenInNewTab &&
@@ -59,6 +60,8 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 			}
 		});
 		menu.addSeparator();
+		menu.addItem((item) => item.setTitle("Close subgroup and all tabs").setIcon("x").setDisabled(readOnly)
+			.onClick(close));
 		menu.addItem((item) => item.setTitle("Delete subgroup (keep tabs)").setDisabled(readOnly)
 			.onClick(() => useSubgroups.getState().remove(subgroup.id)));
 		return menu;
@@ -83,6 +86,7 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 			toolbar={!editing && <>
 				{showToolbarTab && <IconButton icon="plus" action="new-tab" tooltip="New tab" disabled={readOnly} onClick={createTab} />}
 				<IconButton icon="pencil" action="edit" tooltip="Rename subgroup" disabled={readOnly} onClick={startEditing} />
+				<IconButton icon="x" action="close" tooltip="Close subgroup and all tabs" disabled={readOnly} onClick={close} />
 			</>}
 		>
 			{children}

@@ -97,6 +97,11 @@ function setupMoves(realNativeMoves = false) {
 		leaf.setParent = (nextParent) => { leaf.parent = nextParent; };
 		leaf.getEphemeralState = () => ({});
 		leaf.setEphemeralState = () => {};
+		leaf.detach = () => {
+			leaf.parent.children = leaf.parent.children.filter((entry) => entry !== leaf);
+			leaves.delete(id);
+			service.reconcileSubgroups(app);
+		};
 		parent.children.push(leaf);
 		leaves.set(id, leaf);
 	}
@@ -228,6 +233,25 @@ test("empty header transfers do not invoke native movement", async () => {
 	await service.moveSubgroupToGroup(app, id, target);
 	assert.equal(nativeCalls.length, 0);
 	assert.equal(state().data.subgroupsByGroup.target[0].id, id);
+});
+
+test("closing a subgroup detaches every member and preserves unrelated tabs", async () => {
+	const { state, service, app, source, target, leaves } = setupMoves();
+	const id = state().create(source.id, "Work", ["b", "a", "c"]);
+	leaves.get("a").pinned = true;
+	await service.closeSubgroup(app, id);
+	assert.equal(source.children.length, 0);
+	assert.equal(target.children[0].id, "c", "externally moved members are not closed");
+	assert.equal(state().data.subgroupsByGroup.source.length, 0);
+	assert.equal(Object.keys(state().data.subgroupByLeaf).length, 0);
+});
+
+test("closing an empty subgroup removes its header without closing any tabs", async () => {
+	const { state, service, app, source, leaves } = setupMoves();
+	const id = state().create(source.id);
+	await service.closeSubgroup(app, id);
+	assert.equal(leaves.size, 3);
+	assert.equal(state().data.subgroupsByGroup.source.length, 0);
 });
 
 test("partial transfer failure keeps remaining membership and exposes moved tabs ungrouped", async () => {
