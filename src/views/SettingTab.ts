@@ -549,6 +549,13 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 				useSettings.getState().setSettings({ showMoreButtons: value });
 			},
 		});
+
+		this.createToggle(containerEl, {
+			name: "Keep restored items in archive",
+			desc: "Keep archive entries as reusable bookmarks. When disabled, successfully restored items are removed from the archive.",
+			value: this.plugin.settings.keepArchiveAfterRestore,
+			onChange: (value) => useSettings.getState().setSettings({ keepArchiveAfterRestore: value }),
+		});
 	}
 
 	private displayTabZoomOptions(containerEl: HTMLElement | SettingGroup) {
@@ -1553,6 +1560,11 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 						name: "Show more actions",
 						desc: "Show more control buttons in the toolbar.",
 						control: { type: "toggle", key: "showMoreButtons" },
+					},
+					{
+						name: "Keep restored items in archive",
+						desc: "Keep archive entries as reusable bookmarks. When disabled, successfully restored items are removed from the archive.",
+						control: { type: "toggle", key: "keepArchiveAfterRestore" },
 					},
 					{
 						name: "Enable tab zoom",

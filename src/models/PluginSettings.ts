@@ -40,6 +40,7 @@ interface ObsidianVerticalTabsSettings {
 	enableUpdateCheck: boolean;
 	newTabButtonPlacement: NewTabButtonPlacement;
 	tabClosingBehavior: TabClosingBehavior;
+	keepArchiveAfterRestore: boolean;
 }
 
 export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
@@ -80,6 +81,7 @@ export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
 	enableUpdateCheck: true,
 	newTabButtonPlacement: NewTabButtonPlacement.GroupToolbar,
 	tabClosingBehavior: TabClosingBehavior.ActiveRight,
+	keepArchiveAfterRestore: false,
 };
 
 export type Settings = ObsidianVerticalTabsSettings;

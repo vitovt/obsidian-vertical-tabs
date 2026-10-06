@@ -45,6 +45,7 @@ import { applyTabTitle } from "./services/Customization";
 import { localStorageService } from "./stores/LocalStorageService";
 import { metadataService } from "./stores/TabMetadataService";
 import { hydrateSubgroups } from "./stores/SubgroupStore";
+import { hydrateArchive, useArchive } from "./stores/ArchiveStore";
 import {
 	disableUniversalCanSplit,
 	enableUniversalCanSplit,
@@ -144,6 +145,10 @@ export default class ObsidianVerticalTabs extends Plugin {
 		hydrateViewState();
 		hydrateTabCacheStore();
 		hydrateSubgroups(this.app);
+		hydrateArchive(this.app);
+		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+			useArchive.getState().renamePath(oldPath, file.path);
+		}));
 	}
 
 	async openVerticalTabs() {

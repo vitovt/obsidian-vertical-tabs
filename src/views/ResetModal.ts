@@ -6,8 +6,9 @@ import { localStorageService } from "../stores/LocalStorageService";
 import { resetDatabase } from "../stores/IndexedDBWrapper";
 import { getDBName, DB_STORE_NAMES } from "../stores/TabMetadataDB";
 import { useSubgroups } from "../stores/SubgroupStore";
+import { useArchive } from "../stores/ArchiveStore";
 
-type ResetScope = "settings" | "db" | "all";
+type ResetScope = "settings" | "db" | "archive" | "all";
 
 interface ResetOption {
 	label: string;
@@ -23,12 +24,17 @@ const RESET_OPTIONS: Record<ResetScope, ResetOption> = {
 			"Navigation and tab deduplication settings",
 			"Custom sort order and sort strategy",
 		],
-		keeps: "All custom titles, colors, icons, subgroups, and tab membership will be kept.",
+		keeps: "All custom titles, colors, icons, subgroups, tab membership, and archive entries will be kept.",
 	},
 	db: {
 		label: "Reset customization",
 		erases: ["Custom titles, colors, and icons for groups and tabs", "Subgroups and tab membership (tabs stay open)"],
-		keeps: "All plugin settings and preferences will be kept.",
+		keeps: "All plugin settings, preferences, and archive entries will be kept.",
+	},
+	archive: {
+		label: "Reset archive",
+		erases: ["All archived tabs and subgroups"],
+		keeps: "All files, open tabs, subgroups, customization, and plugin settings will be kept.",
 	},
 	all: {
 		label: "Reset everything",
@@ -37,12 +43,13 @@ const RESET_OPTIONS: Record<ResetScope, ResetOption> = {
 			"All plugin settings and feature preferences",
 			"Custom sort order and strategy",
 			"Subgroups and tab membership (tabs stay open)",
+			"All archived tabs and subgroups",
 		],
 		keeps: null,
 	},
 };
 
-const SCOPE_ORDER: ResetScope[] = ["settings", "db", "all"];
+const SCOPE_ORDER: ResetScope[] = ["settings", "db", "archive", "all"];
 
 export class ResetModal extends Modal {
 	private plugin: ObsidianVerticalTabs;
@@ -137,6 +144,9 @@ export class ResetModal extends Modal {
 		const { selected, plugin } = this;
 		this.close();
 		try {
+			if (selected === "archive" || selected === "all") {
+				if (!useArchive.getState().reset()) throw new Error("Could not reset the archive");
+			}
 			if (selected === "db" || selected === "all") {
 				// We cannot disable the plugin here due to Obsidian's policy
 				await resetDatabase(getDBName(plugin.app), [...DB_STORE_NAMES]);

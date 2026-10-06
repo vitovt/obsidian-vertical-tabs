@@ -28,6 +28,10 @@ They exercise both the move adapter and the real native end-move code with fake
 workspace objects; these tests do not prove compatibility with a running
 Obsidian workspace.
 
+Archive storage tests cover restart persistence, individual bookmark removal,
+file and folder renames, invalid saved records, and failed writes. Archive
+updates are published only after the persistent write succeeds.
+
 To verify subgroups in Obsidian:
 
 1. Create three subgroups and rename them. Add several tabs one at a time to each
