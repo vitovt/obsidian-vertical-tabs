@@ -48,7 +48,7 @@ export function setupArchiveService() {
 	function addLeaf(path, parent = source, id = `leaf-${++nextLeaf}`) {
 		if (path && !files.has(path)) addFile(path);
 		let viewState = { type: path ? "markdown" : "search", state: path ? { file: path, mode: "source" } : {} };
-		const leaf = { id, parent, isEphemeral: true, getIcon: () => "file-text", getRoot: () => root,
+		const leaf = { id, parent, isEphemeral: true, getIcon: () => "file-text", getRoot: () => leaf.parent.getRoot(),
 			getViewState: () => viewState, view: { getViewType: () => viewState.type },
 			loadIfDeferred: async () => {},
 			setViewState: async (next) => {

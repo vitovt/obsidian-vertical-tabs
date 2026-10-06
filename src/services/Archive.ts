@@ -92,7 +92,11 @@ async function openArchivedTab(app: App, tab: ArchivedTab, file: TFile, target: 
 	const settings = useSettings.getState();
 	let existing: WorkspaceLeaf | undefined;
 	if (settings.deduplicateTabs) app.workspace.iterateAllLeaves((leaf): void => {
-		if (!existing && getGroupType(app, leaf.parent) === GroupType.RootSplit &&
+		const groupType = getGroupType(app, leaf.parent);
+		const included = groupType === GroupType.RootSplit
+			? leaf.getRoot() === app.workspace.rootSplit || settings.deduplicatePopupTabs
+			: settings.deduplicateSidebarTabs;
+		if (!existing && included &&
 			(!settings.deduplicateSameGroupTabs || leaf.parent === target.group) &&
 			getOpenFileOfLeaf(app, leaf)?.path === file.path) existing = leaf;
 	});

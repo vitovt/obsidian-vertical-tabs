@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { archivedSubgroup, archivedTab } from "./archive-fixtures.mjs";
 import { setupArchiveService } from "./archive-service-fixtures.mjs";
+import { loadModule } from "./subgroup-fixtures.mjs";
 
 test("archiving file tabs saves snapshots before closing and ignores standalone service tabs", async () => {
 	const { archive, service, app, leaves, metadata, addLeaf } = setupArchiveService();
@@ -153,6 +154,41 @@ test("global deduplication restores a foreign file tab into the current group", 
 	assert.equal(target.children.length, 2);
 	assert.equal(subgroups.state().data.subgroupByLeaf[existing.id], undefined);
 	assert.equal(archive.state().data.entries.length, 0);
+});
+
+for (const [rootKey, setting] of [["leftSplit", "deduplicateSidebarTabs"], ["floatingSplit", "deduplicatePopupTabs"]]) {
+	for (const included of [false, true]) {
+		test(`restoration honors ${setting}=${included} when reusing open files`, async () => {
+			const { archive, service, app, target, settings, addLeaf } = setupArchiveService();
+			const foreign = { id: "foreign", children: [], getRoot: () => app.workspace[rootKey] };
+			const existing = addLeaf("One.md", foreign);
+			settings.deduplicateTabs = true;
+			settings.deduplicateSameGroupTabs = false;
+			settings[setting] = included;
+			archive.state().add(archivedTab("one", "One.md"));
+			await service.restoreArchiveEntry(app, "one");
+			assert.equal(existing.parent, included ? target : foreign);
+			assert.equal(target.children.length, 2);
+			assert.equal(archive.state().data.entries.length, 0);
+		});
+	}
+}
+
+test("native blank-tab cleanup protects a pending archive restore and resumes afterward", () => {
+	const { archive, app, target, addLeaf } = setupArchiveService();
+	const temporary = addLeaf(undefined, target);
+	temporary.view.getViewType = () => "empty";
+	const service = loadModule("src/services/DeduplicateTab.ts", {
+		"src/stores/ArchiveStore": archive,
+		"src/models/PluginContext": { useSettings: { getState: () => ({ alwaysOpenInNewTab: true }) } },
+		"src/stores/TabCacheStore": { tabCacheStore: { getState: () => ({ content: new Map([[target.id, { group: target }]]) }) } },
+	});
+	archive.state().setBusy("restore:one", true);
+	service.removeNewTabs();
+	assert.equal(app.workspace.getLeafById(temporary.id), temporary);
+	archive.state().setBusy("restore:one", false);
+	service.removeNewTabs();
+	assert.equal(app.workspace.getLeafById(temporary.id), null);
 });
 
 test("empty and service-only subgroups archive and restore as empty synthetic groups", async () => {

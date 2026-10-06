@@ -69,6 +69,7 @@ To verify the archive in Obsidian:
    subgroup title and confirm it restores together without creating a split.
 4. Enable Keep restored items in archive and repeat with a tab and subgroup.
    Test with deduplication on and off, and restore into another current group.
+   Repeat with sidebar/popout deduplication and Always open in new tab enabled.
 5. Rename a file and its containing folder while the plugin is enabled, then
    reopen its bookmark. Delete a file or disable its viewer plugin and confirm
    failed bookmarks stay available while successful siblings restore.

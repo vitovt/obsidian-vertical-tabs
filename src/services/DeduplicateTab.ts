@@ -204,6 +204,9 @@ export function deduplicateExistingTabs(
 
 export function removeNewTabs() {
 	if (!useSettings.getState().alwaysOpenInNewTab) return;
+	// A freshly created archive restore leaf may still be empty while its
+	// file view loads. Let the restore finish or clean up its own failed leaf.
+	if (useArchive.getState().busyIds.some((id) => id.startsWith("restore:"))) return;
 	tabCacheStore.getState().content.forEach((entry) => {
 		if (entry.group && entry.group.children.length > 1) {
 			entry.group.children.forEach((child) => {
