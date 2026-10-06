@@ -49,7 +49,7 @@ export function makeLeafNonEphemeral(leaf: WorkspaceLeaf) {
 export function makeLeafEphemeralOnEditorChange(
 	info: MarkdownView | MarkdownFileInfo
 ) {
-	if (info instanceof MarkdownView && info.leaf.isEphemeral !== false) {
+	if (info instanceof MarkdownView) {
 		makeLeafNonEphemeral(info.leaf);
 	}
 }
