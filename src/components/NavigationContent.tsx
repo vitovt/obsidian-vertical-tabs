@@ -1,206 +1,153 @@
 import { tabCacheStore } from "src/stores/TabCacheStore";
 import { Tab } from "./Tab";
 import { Group } from "./Group";
+import { Subgroup, subgroupDragId } from "./Subgroup";
 import {
-	closestCenter,
-	DndContext,
-	DragEndEvent,
-	DragOverlay,
-	DragStartEvent,
-	PointerSensor,
-	useSensor,
-	useSensors,
+	closestCenter, DndContext, DragEndEvent, DragOverlay, DragStartEvent,
+	PointerSensor, useSensor, useSensors,
 } from "@dnd-kit/core";
-import { useApp, useSettings } from "src/models/PluginContext";
+import { useApp } from "src/models/PluginContext";
 import { useState } from "react";
-import { CssClasses, toClassName } from "src/utils/CssClasses";
+import { toClassName } from "src/utils/CssClasses";
 import { SortableContext } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
-import {
-	moveTab,
-	moveTabToEnd,
-	moveTabToNewGroup,
-	moveMultipleTabs,
-	moveMultipleTabsToEnd,
-	moveMultipleTabsToNewGroup,
-} from "src/services/MoveTab";
+import { moveMultipleTabsToNewGroup, moveTabToNewGroup } from "src/services/MoveTab";
 import { GroupSlot } from "./GroupSlot";
-import { Identifier } from "src/models/VTWorkspace";
+import { GroupType } from "src/models/VTWorkspace";
 import { WorkspaceLeaf } from "obsidian";
-import { makeLeafNonEphemeral } from "src/services/EphemeralTabs";
 import { TabSlot } from "./TabSlot";
 import { useTabSelection } from "src/stores/TabSelectionStore";
+import { getLeafSubgroup, useSubgroups } from "src/stores/SubgroupStore";
+import { NavigationDragData } from "src/models/NavigationDrag";
+import {
+	moveSubgroupToGroup, moveTabsIntoSubgroup, promoteSubgroupTabs,
+	reportSubgroupError, withSubgroupMove,
+} from "src/services/Subgroups";
+import { NavigationTreeItem } from "./NavigationTreeItem";
 
 export const NavigationContent = () => {
 	const groupIDs = tabCacheStore((state) => state.groupIDs);
 	const content = tabCacheStore((state) => state.content);
-	const { moveGroupBefore, moveGroupToEnd } = tabCacheStore.getActions();
-	const { getSelectedTabs, isTabSelected, clearTabSelection } =
-		useTabSelection();
+	const { moveGroupBefore, moveGroupToEnd, refresh } = tabCacheStore.getActions();
+	const { getSelectedTabs, isTabSelected, clearTabSelection } = useTabSelection();
+	const subgroupData = useSubgroups((state) => state.data);
+	const readOnly = useSubgroups((state) => state.readOnly);
 	const app = useApp();
-	const sensors = useSensors(
-		useSensor(PointerSensor, {
-			activationConstraint: {
-				distance: 8,
-			},
-		})
-	);
-	const [isDragging, setIsDragging] = useState(false);
-	const [isDraggingGroup, setIsDraggingGroup] = useState(false);
+	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+	const [dragKind, setDragKind] = useState<NavigationDragData["kind"] | null>(null);
 	const handleDragStart = (event: DragStartEvent) => {
-		setIsDragging(true);
-		const { active } = event;
-		const isActiveTab = (active.data.current as { isTab: boolean }).isTab;
-		setIsDraggingGroup(!isActiveTab);
+		setDragKind((event.active.data.current as NavigationDragData | undefined)?.kind ?? null);
 	};
 	const handleDragEnd = async (event: DragEndEvent) => {
-		setIsDragging(false);
-		setIsDraggingGroup(false);
+		setDragKind(null);
 		const { active, over } = event;
-		if (!over) return;
-		const activeID = active.id as Identifier;
-		const overID = over.id as Identifier;
-		const isActiveTab = (active.data.current as { isTab: boolean }).isTab;
-		const isOverTab = (over.data.current as { isTab: boolean }).isTab;
-
-		if (isActiveTab) {
-			const selectedTabs = getSelectedTabs();
-			const hasMultipleSelection =
-				selectedTabs.length > 1 && isTabSelected(activeID);
-
-			let movedTabs: WorkspaceLeaf[] = [];
-
-			if (hasMultipleSelection) {
-				// Handle multiple tab movement
-				if (isOverTab) {
-					movedTabs = moveMultipleTabs(app, selectedTabs, overID);
-				} else {
-					const groupID = overID.startsWith("slot")
-						? overID.slice(5)
-						: overID;
-					if (groupID === "new") {
-						movedTabs = await moveMultipleTabsToNewGroup(
-							app,
-							selectedTabs
-						);
-					} else {
-						const parent = content.get(groupID).group;
-						if (parent)
-							movedTabs = moveMultipleTabsToEnd(
-								app,
-								selectedTabs,
-								parent
-							);
-					}
-				}
-				clearTabSelection();
-			} else {
-				// Handle single tab movement
-				let movedTab: WorkspaceLeaf | null = null;
-				if (isOverTab) {
-					movedTab = moveTab(app, activeID, overID);
-				} else {
-					const groupID = overID.startsWith("slot")
-						? overID.slice(5)
-						: overID;
-					if (groupID === "new") {
-						movedTab = await moveTabToNewGroup(app, activeID);
-					} else {
-						const parent = content.get(groupID).group;
-						if (parent)
-							movedTab = moveTabToEnd(app, activeID, parent);
-					}
-				}
-				if (movedTab) movedTabs = [movedTab];
+		if (!over || active.id === over.id) return;
+		const source = active.data.current as NavigationDragData | undefined;
+		const target = over.data.current as NavigationDragData | undefined;
+		if (!source || !target) return;
+		const targetLeaf = target.kind === "tab" ? app.workspace.getLeafById(String(over.id)) : null;
+		const targetGroupId = targetLeaf?.parent.id ?? target.groupId;
+		const targetGroup = targetLeaf?.parent ?? (targetGroupId ? content.get(targetGroupId).group : null);
+		try {
+			if (source.kind === "group") {
+				if (target.kind === "new-group") moveGroupToEnd(String(active.id));
+				else if (targetGroupId) moveGroupBefore(String(active.id), targetGroupId);
+				return;
 			}
-
-			// Make moved tabs non-ephemeral if setting is enabled
-			if (movedTabs.length > 0 && useSettings.getState().ephemeralTabs) {
-				for (const tab of movedTabs) {
-					makeLeafNonEphemeral(tab);
-				}
+			if (source.kind === "subgroup") {
+				if (!source.subgroupId || !targetGroup || target.kind === "new-group") return;
+				if (target.subgroupId === source.subgroupId || !targetGroupId || content.get(targetGroupId).groupType !== GroupType.RootSplit) return;
+				await moveSubgroupToGroup(app, source.subgroupId, targetGroup,
+					target.subgroupId);
+				return;
 			}
-		} else {
-			if (isOverTab) {
-				const leaf = app.workspace.getLeafById(overID);
-				if (!leaf) return;
-				moveGroupBefore(activeID, leaf.parent.id);
-			} else {
-				if (overID === "slot-new") {
-					moveGroupToEnd(activeID);
-				} else {
-					moveGroupBefore(activeID, overID);
-				}
+			if (source.kind !== "tab") return;
+			const id = String(active.id);
+			const selected = getSelectedTabs();
+			const ids = selected.length > 1 && isTabSelected(id) ? selected : [id];
+			let moved: WorkspaceLeaf[] = [];
+			if (target.kind === "new-group") {
+				moved = await withSubgroupMove(app, async () => {
+					const first = ids[0];
+					const leaves = ids.length === 1 && first
+						? [await moveTabToNewGroup(app, first)].filter((leaf): leaf is WorkspaceLeaf => !!leaf)
+						: await moveMultipleTabsToNewGroup(app, ids);
+					useSubgroups.getState().assign([...ids, ...leaves.map((leaf) => leaf.id)]);
+					promoteSubgroupTabs(leaves);
+					return leaves;
+				});
+			} else if (targetGroup) {
+				const subgroupId = targetLeaf
+					? getLeafSubgroup(useSubgroups.getState().data, targetLeaf.id, targetGroup.id)
+					: target.subgroupId;
+				moved = await moveTabsIntoSubgroup(app, ids, targetGroup, subgroupId, targetLeaf?.id, target.kind === "tab-slot");
 			}
+			if (moved.length && ids.length > 1) clearTabSelection();
+		} catch (error) {
+			reportSubgroupError(error);
+		} finally {
+			refresh(app);
 		}
 	};
 
-	const rootContainerClasses: CssClasses = {
-		"obsidian-vertical-tabs-container": true,
-		"is-dragging-group": isDraggingGroup,
-	};
-
-	const containerClasses: CssClasses = {
-		"is-dragging": isDragging,
-	};
-
-	const getGroupIDs = () => [...groupIDs, "slot-new"];
-
-	const getLeaveIDs = (groupID: Identifier) => {
-		const group = content.get(groupID);
-		return [...group.leafIDs, `slot-${groupID}`];
-	};
-
-	const entryOf = (groupID: Identifier) => {
-		return content.get(groupID);
-	};
-
 	return (
-		<div className={toClassName(rootContainerClasses)}>
-			<div className={toClassName(containerClasses)}>
-				<DndContext
-					sensors={sensors}
-					collisionDetection={closestCenter}
-					onDragStart={handleDragStart}
-					onDragEnd={(event) => void handleDragEnd(event)}
-				>
-					<SortableContext items={getGroupIDs()}>
-						{groupIDs.map((groupID) => (
-							<Group
-								key={groupID}
-								type={entryOf(groupID).groupType}
-								group={entryOf(groupID).group}
-							>
-								{(isSingleGroup, viewType) => (
-									<SortableContext
-										items={getLeaveIDs(groupID)}
-									>
-										{entryOf(groupID).leaves.map(
-											(leaf, index, array) => {
-												const isLast =
-													index === array.length - 1;
-												return (
-													<Tab
-														key={leaf.id}
-														leaf={leaf}
-														index={index + 1}
-														isLast={isLast}
-														isSingleGroup={
-															isSingleGroup
-														}
-														viewType={viewType}
-													/>
-												);
-											}
-										)}
-										<TabSlot
-											group={entryOf(groupID).group}
-											groupID={groupID}
-										/>
-									</SortableContext>
-								)}
-							</Group>
-						))}
+		<div className={toClassName({
+			"obsidian-vertical-tabs-container": true,
+			"is-dragging-group": dragKind === "group",
+			"is-dragging-subgroup": dragKind === "subgroup",
+		})}>
+			<div className={toClassName({ "is-dragging": !!dragKind })}>
+				<DndContext sensors={sensors}
+					collisionDetection={(args) => closestCenter({ ...args,
+						droppableContainers: args.droppableContainers.filter((container) => {
+							const kind = (container.data.current as NavigationDragData | undefined)?.kind;
+							if (dragKind === "group") return kind === "group" || kind === "new-group";
+							if (dragKind === "subgroup") return kind === "group" || kind === "subgroup" || kind === "tab-slot";
+							return kind !== "subgroup-slot";
+						}),
+					})}
+					onDragStart={handleDragStart} onDragCancel={() => setDragKind(null)}
+					onDragEnd={(event) => void handleDragEnd(event)}>
+					<SortableContext items={[...groupIDs, "slot-new"]}>
+						{groupIDs.map((groupID) => {
+							const entry = content.get(groupID);
+							const group = entry.group;
+							const nativeIndices = new Map(group?.children.map((leaf, index) => [leaf.id, index + 1]));
+							const subgroups = entry.groupType === GroupType.RootSplit && group
+								? subgroupData.subgroupsByGroup[group.id] ?? [] : [];
+							const membership = new Map(entry.leaves.map((leaf) => [leaf.id,
+								group && entry.groupType === GroupType.RootSplit
+									? getLeafSubgroup(subgroupData, leaf.id, group.id) : undefined]));
+							return <Group key={groupID} type={entry.groupType} group={group}>
+								{(isSingleGroup, viewType) => {
+									const renderTabs = (subgroupId?: string) => entry.leaves.map((leaf, index) => {
+										const nativeIndex = entry.groupType === GroupType.RootSplit ? nativeIndices.get(leaf.id) ?? index + 1 : index + 1;
+										return membership.get(leaf.id) === subgroupId ? <Tab key={leaf.id} leaf={leaf}
+											index={nativeIndex} isLast={entry.groupType === GroupType.RootSplit && group
+												? nativeIndex === group.children.length : index === entry.leaves.length - 1}
+											isSingleGroup={isSingleGroup} viewType={viewType} /> : null;
+									});
+									return <>
+										<SortableContext items={entry.leafIDs}>
+											{renderTabs()}
+											<SortableContext items={subgroups.map((subgroup) => subgroupDragId(subgroup.id))}>
+												{group && subgroups.map((subgroup) => <Subgroup key={subgroup.id} subgroup={subgroup} group={group}>
+													<SortableContext items={entry.leafIDs.filter((id) => membership.get(id) === subgroup.id)}>
+														{renderTabs(subgroup.id)}
+													</SortableContext>
+												</Subgroup>)}
+											</SortableContext>
+											<TabSlot group={group} groupID={groupID} />
+										</SortableContext>
+										{group && entry.groupType === GroupType.RootSplit && <NavigationTreeItem
+											id={`new-subgroup:${group.id}`} title="New subgroup" icon="plus" isTab={true}
+											isTabSlot={true} classNames={{ "as-new-tab-button": true, "is-new-subgroup": true }}
+											dragData={{ kind: "subgroup-slot", groupId: group.id }} dragDisabled={true}
+											onClick={() => { if (!readOnly) useSubgroups.getState().create(group.id); }} />}
+									</>;
+								}}
+							</Group>;
+						})}
 						<GroupSlot />
 					</SortableContext>
 					{createPortal(<DragOverlay />, activeDocument.body)}

@@ -5,6 +5,7 @@ import { STORAGE_KEYS } from "../constants/StorageKeys";
 import { localStorageService } from "../stores/LocalStorageService";
 import { resetDatabase } from "../stores/IndexedDBWrapper";
 import { getDBName, DB_STORE_NAMES } from "../stores/TabMetadataDB";
+import { useSubgroups } from "../stores/SubgroupStore";
 
 type ResetScope = "settings" | "db" | "all";
 
@@ -22,11 +23,11 @@ const RESET_OPTIONS: Record<ResetScope, ResetOption> = {
 			"Navigation and tab deduplication settings",
 			"Custom sort order and sort strategy",
 		],
-		keeps: "All custom titles, colors, and icons for groups and tabs will be kept.",
+		keeps: "All custom titles, colors, icons, subgroups, and tab membership will be kept.",
 	},
 	db: {
 		label: "Reset customization",
-		erases: ["Custom titles, colors, and icons for groups and tabs"],
+		erases: ["Custom titles, colors, and icons for groups and tabs", "Subgroups and tab membership (tabs stay open)"],
 		keeps: "All plugin settings and preferences will be kept.",
 	},
 	all: {
@@ -35,6 +36,7 @@ const RESET_OPTIONS: Record<ResetScope, ResetOption> = {
 			"Custom titles, colors, and icons for all groups and tabs",
 			"All plugin settings and feature preferences",
 			"Custom sort order and strategy",
+			"Subgroups and tab membership (tabs stay open)",
 		],
 		keeps: null,
 	},
@@ -138,6 +140,7 @@ export class ResetModal extends Modal {
 			if (selected === "db" || selected === "all") {
 				// We cannot disable the plugin here due to Obsidian's policy
 				await resetDatabase(getDBName(plugin.app), [...DB_STORE_NAMES]);
+				useSubgroups.getState().reset();
 			}
 			if (selected === "settings" || selected === "all") {
 				plugin.settings = { ...DEFAULT_SETTINGS };

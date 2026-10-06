@@ -44,6 +44,7 @@ import { ViewEphemeralState } from "obsidian-typings";
 import { applyTabTitle } from "./services/Customization";
 import { localStorageService } from "./stores/LocalStorageService";
 import { metadataService } from "./stores/TabMetadataService";
+import { hydrateSubgroups } from "./stores/SubgroupStore";
 import {
 	disableUniversalCanSplit,
 	enableUniversalCanSplit,
@@ -142,6 +143,7 @@ export default class ObsidianVerticalTabs extends Plugin {
 		await runPersistenceMigrations(this);
 		hydrateViewState();
 		hydrateTabCacheStore();
+		hydrateSubgroups(this.app);
 	}
 
 	async openVerticalTabs() {

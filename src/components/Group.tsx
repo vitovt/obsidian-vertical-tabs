@@ -48,6 +48,7 @@ import {
 } from "src/services/Customization";
 import { IconSelectionModal } from "src/views/IconSelectionModal";
 import { createVTMenu } from "src/services/Menu";
+import { useSubgroups } from "src/stores/SubgroupStore";
 
 interface GroupProps {
 	type: GroupType;
@@ -302,6 +303,14 @@ export const Group = (props: GroupProps) => {
 	/* Menu */
 	const buildMenu = () => {
 		const menu = createVTMenu("vt-group-menu");
+		if (!isSidebar && group) {
+			menu.addItem((item) => item.setTitle("New subgroup")
+				.setDisabled(useSubgroups.getState().readOnly)
+				.onClick(() => {
+					toggleCollapsedGroup(group.id, false);
+					useSubgroups.getState().create(group.id);
+				}));
+		}
 		// Customization
 		menu.addItem((item) => {
 			item.setSection("customization")
