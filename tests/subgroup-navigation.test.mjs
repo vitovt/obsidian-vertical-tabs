@@ -61,6 +61,7 @@ test("the navigation tree filters native order, preserves indices and renders em
 			"data-leaf": leaf.id, "data-index": index, "data-last": String(isLast),
 		}) },
 	};
+	imports["./useNavigationDrag"] = loadModule("src/components/useNavigationDrag.ts", imports);
 	imports["./NavigationTreeItem"] = loadModule("src/components/NavigationTreeItem.tsx", imports);
 	imports["./Subgroup"] = loadModule("src/components/Subgroup.tsx", imports);
 	const { NavigationContent } = loadModule("src/components/NavigationContent.tsx", imports);

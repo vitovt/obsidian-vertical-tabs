@@ -2,12 +2,8 @@ import { tabCacheStore } from "src/stores/TabCacheStore";
 import { Tab } from "./Tab";
 import { Group } from "./Group";
 import { Subgroup, subgroupDragId } from "./Subgroup";
-import {
-	closestCenter, DndContext, DragEndEvent, DragOverlay, DragStartEvent,
-	PointerSensor, useSensor, useSensors,
-} from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
 import { useApp } from "src/models/PluginContext";
-import { useState } from "react";
 import { toClassName } from "src/utils/CssClasses";
 import { SortableContext } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
@@ -25,6 +21,7 @@ import {
 } from "src/services/Subgroups";
 import { NavigationTreeItem } from "./NavigationTreeItem";
 import { ArchivePanel } from "./ArchivePanel";
+import { useNavigationDrag } from "./useNavigationDrag";
 
 export const NavigationContent = () => {
 	const groupIDs = tabCacheStore((state) => state.groupIDs);
@@ -34,13 +31,7 @@ export const NavigationContent = () => {
 	const subgroupData = useSubgroups((state) => state.data);
 	const readOnly = useSubgroups((state) => state.readOnly);
 	const app = useApp();
-	const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-	const [dragKind, setDragKind] = useState<NavigationDragData["kind"] | null>(null);
-	const handleDragStart = (event: DragStartEvent) => {
-		setDragKind((event.active.data.current as NavigationDragData | undefined)?.kind ?? null);
-	};
 	const handleDragEnd = async (event: DragEndEvent) => {
-		setDragKind(null);
 		const { active, over } = event;
 		if (!over || active.id === over.id) return;
 		const source = active.data.current as NavigationDragData | undefined;
@@ -91,6 +82,8 @@ export const NavigationContent = () => {
 		}
 	};
 
+	const { dragKind, dragProps } = useNavigationDrag(handleDragEnd);
+
 	return (
 		<div className={toClassName({
 			"obsidian-vertical-tabs-container": true,
@@ -98,17 +91,7 @@ export const NavigationContent = () => {
 			"is-dragging-subgroup": dragKind === "subgroup",
 		})}>
 			<div className={toClassName({ "is-dragging": !!dragKind })}>
-				<DndContext sensors={sensors}
-					collisionDetection={(args) => closestCenter({ ...args,
-						droppableContainers: args.droppableContainers.filter((container) => {
-							const kind = (container.data.current as NavigationDragData | undefined)?.kind;
-							if (dragKind === "group") return kind === "group" || kind === "new-group";
-							if (dragKind === "subgroup") return kind === "group" || kind === "subgroup" || kind === "tab-slot";
-							return kind !== "subgroup-slot";
-						}),
-					})}
-					onDragStart={handleDragStart} onDragCancel={() => setDragKind(null)}
-					onDragEnd={(event) => void handleDragEnd(event)}>
+				<DndContext {...dragProps}>
 					<SortableContext items={[...groupIDs, "slot-new"]}>
 						{groupIDs.map((groupID) => {
 							const entry = content.get(groupID);
