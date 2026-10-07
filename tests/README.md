@@ -34,7 +34,9 @@ updates are published only after the persistent write succeeds.
 Archive service tests cover mixed file/service subgroups, partial restores,
 current-group placement, deduplication, repeat clicks, and both retention modes.
 Archive rendering tests cover collapse states and independent bookmark/subgroup
-delete controls without registering native tab indices or drag targets.
+delete controls without registering native tab indices. Archive moves use a
+separate drag context from open tabs; move tests cover ordering, subgroup
+membership, empty parents, restart persistence, busy entries, and failed writes.
 
 To verify subgroups in Obsidian:
 
@@ -81,3 +83,15 @@ To verify the archive in Obsidian:
    change. Accept and check only the requested action completes. Closing an
    empty or one-tab subgroup should not prompt; archive deletion preferences
    should not add prompts to successful restoration or archiving.
+8. Drag archive bookmarks from their title, icon, or row background on desktop,
+   just like open tabs. On mobile, use the same shared handle as the main list.
+   Drop onto a tab to insert before it and onto subgroup/end slots to append.
+   Drop onto expanded, collapsed, and empty subgroup headers, then move tabs
+   between subgroups. Drop onto a root tab or the archive end slot to move a
+   child out. Reorder subgroup headers too, and check empty source subgroups
+   stay available. Verify dragging does not restore or delete bookmarks.
+9. Repeat using Move up/down, Move to subgroup, and Move out of subgroup in
+   context menus. Cancel a drag with Escape and confirm nothing changes.
+   Restart and check order and membership, then restore the moved bookmarks
+   and verify their saved view state and customization. Try moving during a
+   pending restore/delete; busy entries and subgroups should reject the move.

@@ -24,6 +24,10 @@ export interface ArchivedSubgroup {
 }
 
 export type ArchiveEntry = ArchivedTab | ArchivedSubgroup;
+export interface ArchiveMoveTarget {
+	subgroupId?: string;
+	beforeId?: string;
+}
 export interface ArchiveData {
 	version: 1;
 	collapsed: boolean;
@@ -95,6 +99,7 @@ interface ArchiveStore {
 	addMany: (entries: ArchiveEntry[]) => boolean;
 	remove: (id: string) => boolean;
 	removeTabs: (id: string, tabIds: string[]) => boolean;
+	move: (id: string, target: ArchiveMoveTarget) => boolean;
 	setCollapsed: (collapsed: boolean) => void;
 	setEntryCollapsed: (id: string, collapsed: boolean) => void;
 	renamePath: (oldPath: string, newPath: string) => void;
@@ -136,6 +141,49 @@ export const useArchive = create<ArchiveStore>()((set, get) => ({
 		return { ...data, entries: data.entries.flatMap((item) => item !== entry ? [item]
 			: tabs.length ? [{ ...entry, tabs }] : []) };
 	}),
+	move: (id, target) => {
+		const { data, busyIds, readOnly } = get();
+		const source = data.entries.find((entry) => entry.id === id ||
+			entry.kind === "subgroup" && entry.tabs.some((tab) => tab.id === id));
+		const item = source?.id === id ? source
+			: source?.kind === "subgroup" ? source.tabs.find((tab) => tab.id === id) : undefined;
+		const destination = target.subgroupId === undefined ? undefined
+			: data.entries.find((entry): entry is ArchivedSubgroup =>
+				entry.kind === "subgroup" && entry.id === target.subgroupId);
+		if (readOnly || !source || !item || target.subgroupId !== undefined && !destination ||
+			item.kind === "subgroup" && destination || busyIds.includes(`entry:${source.id}`) ||
+			destination && busyIds.includes(`entry:${destination.id}`)) return false;
+		const siblings = destination?.tabs ?? data.entries;
+		if (target.beforeId !== undefined && !siblings.some((entry) => entry.id === target.beforeId)) return false;
+		if (target.beforeId === id) return true;
+
+		return updateData(() => {
+			let entries = data.entries.filter((entry) => entry.id !== id).map((entry) =>
+				entry === source && entry.kind === "subgroup"
+					? { ...entry, tabs: entry.tabs.filter((tab) => tab.id !== id) } : entry);
+			const insert = <T extends ArchiveEntry>(items: T[], entry: T): T[] => {
+				const next = [...items];
+				const index = target.beforeId === undefined ? next.length
+					: next.findIndex((entry) => entry.id === target.beforeId);
+				next.splice(index, 0, entry);
+				return next;
+			};
+			if (destination && item.kind === "tab") {
+				entries = entries.map((entry) => entry.id === destination.id && entry.kind === "subgroup"
+					? { ...entry, tabs: insert(entry.tabs, item) } : entry);
+			} else {
+				entries = insert(entries, item);
+			}
+			// Keep empty subgroups available for future moves, and avoid redundant writes.
+			const unchanged = entries.length === data.entries.length && entries.every((entry, index) => {
+				const previous = data.entries[index];
+				return entry.id === previous?.id && (entry.kind !== "subgroup" ||
+					previous.kind === "subgroup" && entry.tabs.length === previous.tabs.length &&
+					entry.tabs.every((tab, index) => tab.id === previous.tabs[index]?.id));
+			});
+			return unchanged ? data : { ...data, entries };
+		});
+	},
 	setCollapsed: (collapsed) => updateData((data) => data.collapsed === collapsed ? data : { ...data, collapsed }),
 	setEntryCollapsed: (id, collapsed) => updateData((data) => {
 		const entry = data.entries.find((entry) => entry.id === id);

@@ -7,7 +7,9 @@
 	.tree-item.is-new-subgroup > .tree-item-self {
 		color: var(--text-muted);
 	}
-	&.is-dragging-subgroup .tree-item.is-subgroup.vt-is-being-dragged-over::before {
-		background: var(--interactive-accent);
+	&.is-dragging-subgroup, .is-dragging-subgroup {
+		.tree-item.is-subgroup.vt-is-being-dragged-over::before {
+			background: var(--interactive-accent);
+		}
 	}
 }

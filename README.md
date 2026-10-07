@@ -53,6 +53,15 @@ archive** to reuse them as bookmarks. Missing files and failed restores remain
 in the archive. The **Delete from archive** buttons and context-menu actions
 remove only bookmarks; they do not close open tabs or delete files.
 
+Drag archived tabs or subgroup headers from anywhere on their row on desktop,
+just like open tabs; mobile uses the same drag handle as the main list. Drop a
+tab onto a subgroup header (including a collapsed or empty subgroup) to add it
+there, onto a tab to insert before it, or onto the end slot to append it. Drop
+onto a root tab or the archive end slot to take a tab out of a subgroup.
+Context menus also provide **Move up**, **Move down**, **Move to subgroup…**, and
+**Move out of subgroup**. Moving bookmarks keeps their saved state and leaves
+empty archived subgroups available for reuse.
+
 The archive is saved locally for this vault on this device and survives an
 Obsidian restart. File and folder renames in the vault update saved paths.
 **Reset archive** clears only bookmarks; **Reset everything** also clears them.
