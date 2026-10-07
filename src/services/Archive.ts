@@ -13,6 +13,7 @@ import { loadDeferredLeaf } from "./LoadDeferredLeaf";
 import { confirmAction } from "src/views/ConfirmActionModal";
 
 async function withArchiveAction(keys: string[], operation: () => Promise<void>): Promise<void> {
+	if (!useSettings.getState().enableArchive) return;
 	const store = useArchive.getState();
 	if (store.readOnly || keys.some((key) => store.busyIds.includes(key))) return;
 	for (const key of keys) store.setBusy(key, true);
@@ -198,6 +199,7 @@ export function reportArchiveError(error: unknown) {
 }
 
 export function addArchiveTabMenu(app: App, menu: Menu, leafIds: string[]) {
+	if (!useSettings.getState().enableArchive) return;
 	const available = leafIds.some((id) => {
 		const leaf = app.workspace.getLeafById(id);
 		return leaf && getOpenFileOfLeaf(app, leaf);

@@ -562,6 +562,13 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 	private displayArchiveSettingsSection(containerEl: HTMLElement) {
 		const group = this.createSettingGroup(containerEl, "Archive");
 		this.createToggle(group, {
+			name: "Enable archive",
+			desc: "Archive tabs and subgroups for later. Turning this off hides archive controls and keeps saved entries.",
+			value: this.plugin.settings.enableArchive,
+			onChange: (value) => this.toggleArchive(value),
+		});
+		if (!this.plugin.settings.enableArchive) return;
+		this.createToggle(group, {
 			name: "Keep restored items in archive",
 			desc: "Keep archive entries as reusable bookmarks. When disabled, successfully restored items are removed from the archive.",
 			value: this.plugin.settings.keepArchiveAfterRestore,
@@ -579,6 +586,11 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 			value: this.plugin.settings.confirmDeleteArchivedTab,
 			onChange: (value) => useSettings.getState().setSettings({ confirmDeleteArchivedTab: value }),
 		});
+	}
+
+	private toggleArchive(enableArchive: boolean) {
+		useSettings.getState().setSettings({ enableArchive });
+		this.refresh();
 	}
 
 	private displayTabZoomOptions(containerEl: HTMLElement | SettingGroup) {
@@ -1452,6 +1464,9 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		switch (key) {
+			case "enableArchive":
+				this.toggleArchive(value as boolean);
+				break;
 			case "navigationStrategy":
 				this.updateNavigationStrategy(value as TabNavigationStrategy);
 				break;
@@ -1621,18 +1636,26 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 					!this.plugin.settings.backgroundMode,
 				items: [
 					{
+						name: "Enable archive",
+						desc: "Archive tabs and subgroups for later. Turning this off hides archive controls and keeps saved entries.",
+						control: { type: "toggle", key: "enableArchive" },
+					},
+					{
 						name: "Keep restored items in archive",
 						desc: "Keep archive entries as reusable bookmarks. When disabled, successfully restored items are removed from the archive.",
+						visible: () => this.plugin.settings.enableArchive,
 						control: { type: "toggle", key: "keepArchiveAfterRestore" },
 					},
 					{
 						name: "Confirm deleting archived subgroups",
 						desc: "Ask before deleting a subgroup and all its bookmarks from the archive.",
+						visible: () => this.plugin.settings.enableArchive,
 						control: { type: "toggle", key: "confirmDeleteArchivedSubgroup" },
 					},
 					{
 						name: "Confirm deleting archived bookmarks",
 						desc: "Ask before deleting an individual bookmark from the archive, including a subgroup child.",
+						visible: () => this.plugin.settings.enableArchive,
 						control: { type: "toggle", key: "confirmDeleteArchivedTab" },
 					},
 				],

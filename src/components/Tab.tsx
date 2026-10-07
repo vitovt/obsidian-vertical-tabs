@@ -112,6 +112,7 @@ export const Tab = memo(function Tab(props: TabProps) {
 
 	/* Relevant settings */
 	const enableTabZoom = useSettings((state) => state.enableTabZoom);
+	const enableArchive = useSettings((state) => state.enableArchive);
 	const alwaysOpenInNewTab = useSettings((state) => state.alwaysOpenInNewTab);
 	const isEditingTabs = useViewState((state) => state.isEditingTabs);
 	const sortStrategy = tabCacheStore((state) => state.sortStrategy);
@@ -949,7 +950,7 @@ export const Tab = memo(function Tab(props: TabProps) {
 
 	const toolbar = (
 		<Fragment>
-			{!isEditing && <IconButton icon="archive" action="archive"
+			{enableArchive && !isEditing && <IconButton icon="archive" action="archive"
 				tooltip={canArchive ? "Archive tab" : "Only file tabs can be archived"}
 				disabled={archiveDisabled || !canArchive} onClick={archive} />}
 			{!isEditing && isPinned && (

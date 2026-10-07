@@ -10,7 +10,7 @@ export function setupArchiveService() {
 	const files = new Map();
 	const leaves = new Map();
 	const metadata = new Map();
-	const settings = { ephemeralTabs: true, keepArchiveAfterRestore: false,
+	const settings = { enableArchive: true, ephemeralTabs: true, keepArchiveAfterRestore: false,
 		confirmCloseSubgroup: false, confirmDeleteArchivedSubgroup: false, confirmDeleteArchivedTab: false };
 	const notices = [];
 	const confirmations = [];

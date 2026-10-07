@@ -4,6 +4,51 @@ import { archivedSubgroup, archivedTab } from "./archive-fixtures.mjs";
 import { setupArchiveService } from "./archive-service-fixtures.mjs";
 import { loadModule } from "./subgroup-fixtures.mjs";
 
+test("disabling the archive blocks actions and preserves tabs, subgroups and saved bookmarks", async () => {
+	const { archive, subgroups, service, app, source, leaves, settings, addLeaf } = setupArchiveService();
+	const file = addLeaf("One.md");
+	const id = subgroups.state().create(source.id, "Research", [file.id]);
+	archive.state().add(archivedTab("saved", "One.md"));
+	const saved = JSON.stringify(archive.state().data);
+	const leafCount = leaves.size;
+	settings.enableArchive = false;
+	await service.archiveTabs(app, [file.id]);
+	await service.archiveSubgroup(app, id);
+	await service.restoreArchiveEntry(app, "saved");
+	await service.deleteArchiveEntry(app, "saved");
+	assert.equal(JSON.stringify(archive.state().data), saved);
+	assert.equal(leaves.size, leafCount);
+	assert.equal(leaves.has(file.id), true);
+	assert.equal(subgroups.state().data.subgroupsByGroup.source[0].id, id);
+	assert.equal(archive.state().busyIds.length, 0);
+
+	settings.enableArchive = true;
+	await service.restoreArchiveEntry(app, "saved");
+	assert.equal(archive.state().data.entries.length, 0);
+	assert.equal(leaves.size, leafCount + 1);
+});
+
+test("archive menu items disappear when disabled and stale menu actions cannot close tabs", async () => {
+	const { archive, service, app, leaves, settings, addLeaf } = setupArchiveService();
+	const file = addLeaf("One.md");
+	const items = [];
+	const menu = { addItem(callback) {
+		const item = { setTitle() { return this; }, setIcon() { return this; },
+			setDisabled() { return this; }, onClick(callback) { this.click = callback; return this; } };
+		callback(item);
+		items.push(item);
+	} };
+	service.addArchiveTabMenu(app, menu, [file.id]);
+	assert.equal(items.length, 1);
+	settings.enableArchive = false;
+	service.addArchiveTabMenu(app, menu, [file.id]);
+	assert.equal(items.length, 1);
+	items[0].click();
+	await Promise.resolve();
+	assert.equal(leaves.has(file.id), true);
+	assert.equal(archive.state().data.entries.length, 0);
+});
+
 test("archiving file tabs saves snapshots before closing and ignores standalone service tabs", async () => {
 	const { archive, service, app, leaves, metadata, addLeaf } = setupArchiveService();
 	const file = addLeaf("One.md");

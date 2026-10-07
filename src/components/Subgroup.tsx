@@ -25,6 +25,7 @@ interface SubgroupProps {
 
 export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 	const app = useApp();
+	const enableArchive = useSettings((state) => state.enableArchive);
 	const editing = useSubgroups((state) => state.editingId === subgroup.id);
 	const readOnly = useSubgroups((state) => state.readOnly);
 	const archiveDisabled = useArchive((state) => state.readOnly || state.busyIds.includes(`archive-subgroup:${subgroup.id}`));
@@ -65,8 +66,10 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 			}
 		});
 		menu.addSeparator();
-		menu.addItem((item) => item.setTitle("Archive subgroup").setIcon("archive").setDisabled(readOnly || archiveDisabled)
-			.onClick(archive));
+		if (useSettings.getState().enableArchive) {
+			menu.addItem((item) => item.setTitle("Archive subgroup").setIcon("archive").setDisabled(readOnly || archiveDisabled)
+				.onClick(archive));
+		}
 		menu.addItem((item) => item.setTitle("Close subgroup and all tabs").setIcon("x").setDisabled(readOnly)
 			.onClick(close));
 		menu.addItem((item) => item.setTitle("Delete subgroup (keep tabs)").setDisabled(readOnly)
@@ -90,8 +93,8 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 			onDoubleClick={() => { if (!readOnly) startEditing(); }}
 			onContextMenu={(event) => buildMenu().showAtMouseEvent(event.nativeEvent)}
 			toolbar={!editing && <>
-				<IconButton icon="archive" action="archive" tooltip="Archive file tabs and close subgroup"
-					disabled={readOnly || archiveDisabled} onClick={archive} />
+				{enableArchive && <IconButton icon="archive" action="archive" tooltip="Archive file tabs and close subgroup"
+					disabled={readOnly || archiveDisabled} onClick={archive} />}
 				{showToolbarTab && <IconButton icon="plus" action="new-tab" tooltip="New tab" disabled={readOnly} onClick={createTab} />}
 				<IconButton icon="pencil" action="edit" tooltip="Rename subgroup" disabled={readOnly} onClick={startEditing} />
 				<IconButton icon="x" action="close" tooltip="Close subgroup and all tabs" disabled={readOnly} onClick={close} />

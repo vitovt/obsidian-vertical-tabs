@@ -3,7 +3,7 @@ import { Tab } from "./Tab";
 import { Group } from "./Group";
 import { Subgroup, subgroupDragId } from "./Subgroup";
 import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
-import { useApp } from "src/models/PluginContext";
+import { useApp, useSettings } from "src/models/PluginContext";
 import { toClassName } from "src/utils/CssClasses";
 import { SortableContext } from "@dnd-kit/sortable";
 import { createPortal } from "react-dom";
@@ -24,6 +24,7 @@ import { ArchivePanel } from "./ArchivePanel";
 import { useNavigationDrag } from "./useNavigationDrag";
 
 export const NavigationContent = () => {
+	const enableArchive = useSettings((state) => state.enableArchive);
 	const groupIDs = tabCacheStore((state) => state.groupIDs);
 	const content = tabCacheStore((state) => state.content);
 	const { moveGroupBefore, moveGroupToEnd, refresh } = tabCacheStore.getActions();
@@ -137,7 +138,7 @@ export const NavigationContent = () => {
 					{createPortal(<DragOverlay />, activeDocument.body)}
 				</DndContext>
 			</div>
-			<ArchivePanel />
+			{enableArchive && <ArchivePanel />}
 		</div>
 	);
 };

@@ -26,6 +26,8 @@ test("the navigation tree filters native order, preserves indices and renders em
 		getState: store.state,
 	}) };
 	const subgroupRows = new Map();
+	const settings = { enableArchive: true, newTabButtonPlacement: "none" };
+	let archiveMounts = 0;
 	const runtime = { ...jsxRuntime, ...Object.fromEntries(["jsx", "jsxs"].map((name) => [name, (type, props, key) => {
 		if (props.onClick && props.className?.includes("tree-item-self")) subgroupRows.set(sortableConfigs.at(-1).id, props);
 		return jsxRuntime[name](type, props, key);
@@ -38,7 +40,7 @@ test("the navigation tree filters native order, preserves indices and renders em
 		"src/stores/TabCacheStore": { tabCacheStore: cache },
 		"src/models/PluginContext": {
 			useApp: () => ({}),
-			useSettings: (selector) => selector({ newTabButtonPlacement: "none" }),
+			useSettings: (selector) => selector(settings),
 		},
 		"src/models/ViewState": { useViewState: (selector) => selector({ latestActiveLeaf: null }) },
 		"src/models/NewTab": { NewTabButtonPlacement: { GroupToolbar: "toolbar", Both: "both", TabSlot: "slot" } },
@@ -57,10 +59,10 @@ test("the navigation tree filters native order, preserves indices and renders em
 		},
 		"react-dom": { createPortal: (child) => child },
 		"src/stores/TabSelectionStore": { useTabSelection: () => ({}) },
-		"./IconButton": { IconButton: () => null },
+		"./IconButton": { IconButton: ({ action }) => React.createElement("button", { "data-action": action }) },
 		"./Group": { Group: ({ children }) => children(false, "default") },
 		"./GroupSlot": { GroupSlot: () => null },
-		"./ArchivePanel": { ArchivePanel: () => null },
+		"./ArchivePanel": { ArchivePanel: () => { archiveMounts++; return React.createElement("div", { "data-archive": true }); } },
 		"./TabSlot": { TabSlot: () => null },
 		"./Tab": { Tab: ({ leaf, index, isLast }) => React.createElement("div", {
 			"data-leaf": leaf.id, "data-index": index, "data-last": String(isLast),
@@ -91,6 +93,19 @@ test("the navigation tree filters native order, preserves indices and renders em
 	header.onClick();
 	assert.equal(store.state().data.subgroupsByGroup[group.id].find((item) => item.id === one).collapsed, true);
 	assert.equal(store.state().data.subgroupByLeaf.a, one, "disclosure never changes membership");
+	assert.equal(archiveMounts, 1);
+	assert.match(html, /data-action="archive"/);
+	settings.enableArchive = false;
+	const disabledHtml = renderToStaticMarkup(React.createElement(NavigationContent));
+	assert.equal(archiveMounts, 1, "disabled archive does not mount its panel or drag context");
+	assert.equal(disabledHtml.includes("data-archive"), false);
+	assert.equal(disabledHtml.includes('data-action="archive"'), false);
+	assert.match(disabledHtml, /data-action="close"/);
+	assert.match(disabledHtml, /data-leaf="d"/);
+	settings.enableArchive = true;
+	const enabledHtml = renderToStaticMarkup(React.createElement(NavigationContent));
+	assert.equal(archiveMounts, 2);
+	assert.match(enabledHtml, /data-action="archive"/);
 });
 
 test("editing a shared subgroup header leaves its title input usable and does not toggle disclosure", () => {
