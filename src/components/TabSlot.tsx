@@ -1,5 +1,5 @@
 import { Identifier } from "src/models/VTWorkspace";
-import { NavigationTreeItem } from "./NavigationTreeItem";
+import { NavigationTabSlot } from "./NavigationTabSlot";
 import { useApp, useSettings } from "src/models/PluginContext";
 import { moveTabToEnd } from "src/services/MoveTab";
 import { runWithCanSplit } from "src/services/PlatformCanSplit";
@@ -37,16 +37,6 @@ export const TabSlot = ({ group, groupID }: TabSlotProps) => {
 		}
 	};
 
-	return (
-		<NavigationTreeItem
-			classNames={{ "as-new-tab-button": asNewTabButton }}
-			title={asNewTabButton ? "New tab" : ""}
-			icon={asNewTabButton ? "plus" : "slot"}
-			id={`slot-${groupID}`}
-			isTab={true}
-			isTabSlot={true}
-			dragData={{ kind: "tab-slot", groupId: groupID }}
-			onClick={onClick}
-		/>
-	);
+	return <NavigationTabSlot id={`slot-${groupID}`} groupId={groupID}
+		asNewTabButton={asNewTabButton} onClick={onClick} />;
 };

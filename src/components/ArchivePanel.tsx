@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { setIcon } from "obsidian";
 import { DndContext, DragEndEvent, DragOverlay } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { NavigationDragData } from "src/models/NavigationDrag";
 import { toClassName } from "src/utils/CssClasses";
 import { NavigationTreeItem } from "./NavigationTreeItem";
+import { NavigationSubgroup, addSubgroupCollapseMenuItem } from "./NavigationSubgroup";
+import { NavigationTabSlot } from "./NavigationTabSlot";
+import { IconButton } from "./IconButton";
 import { useNavigationDrag } from "./useNavigationDrag";
 import { useApp } from "src/models/PluginContext";
 import { ArchiveEntry, ArchiveMoveTarget, ArchivedTab, useArchive } from "src/stores/ArchiveStore";
@@ -14,27 +15,6 @@ import { createVTMenu } from "src/services/Menu";
 
 const archiveRoot = "archive-root";
 const archiveDragId = (id: string) => `archive:${id}`;
-
-const ArchiveIcon = ({ icon }: { icon: string }) => {
-	const ref = useRef<HTMLSpanElement>(null);
-	useEffect(() => { if (ref.current) setIcon(ref.current, icon); }, [icon]);
-	return <span className="vt-archive-icon" ref={ref} aria-hidden="true" />;
-};
-
-interface ArchiveActionProps {
-	icon: string;
-	label: string;
-	action: string;
-	disabled: boolean;
-	onClick: () => void;
-}
-
-const ArchiveAction = ({ icon, label, action, disabled, onClick }: ArchiveActionProps) =>
-	<button type="button" className="clickable-icon action-button" data-action={action}
-		aria-label={label} title={label} disabled={disabled}
-		onClick={(event) => { event.stopPropagation(); onClick(); }}>
-		<ArchiveIcon icon={icon} />
-	</button>;
 
 export const ArchivePanel = () => {
 	const app = useApp();
@@ -51,6 +31,10 @@ export const ArchivePanel = () => {
 		const menu = createVTMenu("vt-archive-menu");
 		menu.addItem((item) => item.setTitle(subgroup ? "Restore subgroup" : "Open tab").setIcon("archive-restore")
 			.setDisabled(disabled).onClick(() => restore(id, tabId)));
+		if (subgroup) addSubgroupCollapseMenuItem(menu, {
+			isCollapsed: entry.collapsed, collapseDisabled: disabled,
+			onCollapsedChange: (collapsed) => useArchive.getState().setEntryCollapsed(entry.id, collapsed),
+		});
 		menu.addSeparator();
 		const parent = entries.find((item) => item.id === parentId);
 		const siblings = parent?.kind === "subgroup" ? parent.tabs : entries;
@@ -93,72 +77,66 @@ export const ArchivePanel = () => {
 		}
 	};
 	const { dragKind, dragProps } = useNavigationDrag(handleDragEnd);
-	const renderSlot = (subgroupId?: string, disabled = false) => <NavigationTreeItem
+	const renderSlot = (subgroupId?: string, disabled = false) => <NavigationTabSlot
 		id={subgroupId ? `archive-slot:${subgroupId}` : "archive-slot:root"}
-		title="" icon="slot" isTab={true} isTabSlot={true} dragDisabled={disabled}
-		dragData={{ kind: "tab-slot", groupId: archiveRoot, subgroupId }} />;
+		groupId={archiveRoot} subgroupId={subgroupId} disabled={disabled} />;
 	const renderTab = (tab: ArchivedTab, parentId?: string) => {
 		const id = parentId ?? tab.id;
 		const disabled = readOnly || busyIds.includes(`entry:${id}`);
 		const open = () => { if (!disabled) restore(id, parentId ? tab.id : undefined); };
 		return <NavigationTreeItem key={tab.id} id={archiveDragId(tab.id)} isTab={true} icon={tab.icon}
 			dataType="archive-tab" dataId={tab.id} classNames={{ "is-archived-tab": true }}
-			dragData={{ kind: "tab", groupId: archiveRoot, leafId: tab.id, subgroupId: parentId }} dragDisabled={disabled}
+			dragData={{ kind: "tab", groupId: archiveRoot, leafId: tab.id, subgroupId: parentId }} dragDisabled={disabled} disabled={disabled}
 			onClick={open} onContextMenu={(event) => {
 				event.preventDefault();
 				menu(tab, parentId).showAtMouseEvent(event.nativeEvent);
 			}}
-			title={<button type="button" className="vt-archive-title" title={tab.path} disabled={disabled}
-				onClick={(event) => { event.stopPropagation(); open(); }}>{tab.title}</button>}
-			toolbar={<ArchiveAction icon="trash-2" label="Delete bookmark from archive" action="delete-archive-tab"
+			title={tab.title} tooltip={tab.path}
+			toolbar={<IconButton icon="trash-2" tooltip="Delete bookmark from archive" action="delete-archive-tab"
 				disabled={disabled} onClick={() => remove(id, parentId ? tab.id : undefined)} />} />;
 	};
 	return <section className={toClassName({
 		"vt-archive": true, "is-dragging": !!dragKind, "is-dragging-subgroup": dragKind === "subgroup",
 	})} aria-label="Archive">
-		<button type="button" className="vt-archive-heading" aria-expanded={!collapsed} disabled={readOnly}
-			onClick={() => useArchive.getState().setCollapsed(!collapsed)}>
-			<ArchiveIcon icon={collapsed ? "chevron-right" : "chevron-down"} />
-			<ArchiveIcon icon="archive" />
-			<span>Archive</span><span className="vt-archive-count">{entries.length}</span>
-		</button>
+		<NavigationSubgroup id={null} title="Archive" isCollapsed={collapsed} dragDisabled={true}
+			collapseDisabled={readOnly} onCollapsedChange={(collapsed) => useArchive.getState().setCollapsed(collapsed)}
+			classNames={{ "vt-archive-heading": true }} toolbar={<span className="vt-archive-count">{entries.length}</span>}>
+			{!readOnly && <DndContext {...dragProps}>
+				<div className="vt-archive-entries">
+					{!entries.length && <p className="vt-archive-empty">No archived tabs yet.</p>}
+					<SortableContext items={entries.map((entry) => archiveDragId(entry.id))}>
+						{entries.map((entry) => {
+							if (entry.kind === "tab") return renderTab(entry);
+							const disabled = busyIds.includes(`entry:${entry.id}`);
+							return <NavigationSubgroup key={entry.id} id={archiveDragId(entry.id)}
+								isCollapsed={entry.collapsed} dragDisabled={disabled} collapseDisabled={disabled}
+								onCollapsedChange={(collapsed) => useArchive.getState().setEntryCollapsed(entry.id, collapsed)}
+								dataType="archive-subgroup" dataId={entry.id} classNames={{ "is-archived-subgroup": true }}
+								dragData={{ kind: "subgroup", groupId: archiveRoot, subgroupId: entry.id }}
+								onContextMenu={(event) => {
+									event.preventDefault();
+									menu(entry).showAtMouseEvent(event.nativeEvent);
+								}}
+								title={entry.title}
+								toolbar={<>
+									<span className="vt-archive-count">{entry.tabs.length}</span>
+									<IconButton icon="archive-restore" tooltip="Restore subgroup in the current group"
+										action="restore-archive-subgroup" disabled={disabled} onClick={() => restore(entry.id)} />
+									<IconButton icon="trash-2" tooltip="Delete subgroup from archive" action="delete-archive-subgroup"
+										disabled={disabled} onClick={() => remove(entry.id)} />
+								</>}>
+								<SortableContext items={entry.tabs.map((tab) => archiveDragId(tab.id))}>
+									{entry.tabs.map((tab) => renderTab(tab, entry.id))}
+									{renderSlot(entry.id, disabled)}
+								</SortableContext>
+							</NavigationSubgroup>;
+						})}
+						{renderSlot()}
+					</SortableContext>
+				</div>
+				{createPortal(<DragOverlay />, activeDocument.body)}
+			</DndContext>}
+		</NavigationSubgroup>
 		{readOnly && <p className="vt-archive-empty">The saved archive could not be loaded. Use Reset archive in settings to clear it.</p>}
-		{!collapsed && !readOnly && <DndContext {...dragProps}>
-			<div className="vt-archive-entries">
-				{!entries.length && <p className="vt-archive-empty">No archived tabs yet.</p>}
-				<SortableContext items={entries.map((entry) => archiveDragId(entry.id))}>
-					{entries.map((entry) => {
-						if (entry.kind === "tab") return renderTab(entry);
-						const disabled = busyIds.includes(`entry:${entry.id}`);
-						return <NavigationTreeItem key={entry.id} id={archiveDragId(entry.id)} isTab={false} isSubgroup={true}
-							icon="folder" isCollapsed={entry.collapsed} dragDisabled={disabled}
-							dataType="archive-subgroup" dataId={entry.id} classNames={{ "is-archived-subgroup": true }}
-							dragData={{ kind: "subgroup", groupId: archiveRoot, subgroupId: entry.id }}
-							onContextMenu={(event) => {
-								event.preventDefault();
-								menu(entry).showAtMouseEvent(event.nativeEvent);
-							}}
-							title={<button type="button" className="vt-archive-title" title="Restore subgroup in the current group"
-								disabled={disabled} onClick={() => restore(entry.id)}>{entry.title}</button>}
-							toolbar={<>
-								<span className="vt-archive-count">{entry.tabs.length}</span>
-								<ArchiveAction icon={entry.collapsed ? "chevron-right" : "chevron-down"}
-									label={entry.collapsed ? "Expand archived subgroup" : "Collapse archived subgroup"}
-									action="toggle-archive-subgroup" disabled={disabled}
-									onClick={() => useArchive.getState().setEntryCollapsed(entry.id, !entry.collapsed)} />
-								<ArchiveAction icon="trash-2" label="Delete subgroup from archive" action="delete-archive-subgroup"
-									disabled={disabled} onClick={() => remove(entry.id)} />
-							</>}>
-							<SortableContext items={entry.tabs.map((tab) => archiveDragId(tab.id))}>
-								{entry.tabs.map((tab) => renderTab(tab, entry.id))}
-								{renderSlot(entry.id, disabled)}
-							</SortableContext>
-						</NavigationTreeItem>;
-					})}
-					{renderSlot()}
-				</SortableContext>
-			</div>
-			{createPortal(<DragOverlay />, activeDocument.body)}
-		</DndContext>}
 	</section>;
 };

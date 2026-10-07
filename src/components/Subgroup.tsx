@@ -9,7 +9,8 @@ import { tabCacheStore } from "src/stores/TabCacheStore";
 import { GroupType } from "src/models/VTWorkspace";
 import { getGroupTitle } from "src/services/Customization";
 import { NewTabButtonPlacement } from "src/models/NewTab";
-import { NavigationTreeItem } from "./NavigationTreeItem";
+import { NavigationSubgroup, addSubgroupCollapseMenuItem } from "./NavigationSubgroup";
+import { NavigationTabSlot } from "./NavigationTabSlot";
 import { IconButton } from "./IconButton";
 import { useArchive } from "src/stores/ArchiveStore";
 import { archiveSubgroup, reportArchiveError } from "src/services/Archive";
@@ -39,6 +40,7 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 		// Read the live editing ID so Escape followed by blur cannot commit.
 		if (useSubgroups.getState().editingId === subgroup.id) useSubgroups.getState().rename(subgroup.id, draft);
 	};
+	const setCollapsed = (collapsed: boolean) => useSubgroups.getState().setCollapsed(subgroup.id, collapsed);
 	const startEditing = () => useSubgroups.getState().startEditing(subgroup.id);
 	const createTab = () => createSubgroupTab(app, group, subgroup.id);
 	const close = () => void requestCloseSubgroup(app, subgroup.id).catch(reportSubgroupError);
@@ -50,8 +52,7 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 	const buildMenu = () => {
 		const menu = createVTMenu("vt-subgroup-menu");
 		menu.addItem((item) => item.setTitle("Rename").setDisabled(readOnly).onClick(startEditing));
-		menu.addItem((item) => item.setTitle(subgroup.collapsed ? "Expand" : "Collapse").setDisabled(readOnly)
-			.onClick(() => useSubgroups.getState().setCollapsed(subgroup.id, !subgroup.collapsed)));
+		addSubgroupCollapseMenuItem(menu, { isCollapsed: subgroup.collapsed, collapseDisabled: readOnly, onCollapsedChange: setCollapsed });
 		menu.addItem((item) => item.setTitle("New tab").setDisabled(readOnly).onClick(createTab));
 		menu.addItem((item) => {
 			item.setTitle("Move subgroup to…").setDisabled(readOnly);
@@ -73,11 +74,11 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 		return menu;
 	};
 	return (
-		<NavigationTreeItem
-			id={subgroupDragId(subgroup.id)} isTab={false} isSubgroup={true}
+		<NavigationSubgroup
+			id={subgroupDragId(subgroup.id)}
 			dragData={{ kind: "subgroup", groupId: group.id, subgroupId: subgroup.id }}
 			dragDisabled={readOnly} isRenaming={editing} isCollapsed={subgroup.collapsed}
-			isActiveGroup={containsActive} icon="right-triangle"
+			isActiveGroup={containsActive} collapseDisabled={readOnly} onCollapsedChange={setCollapsed}
 			title={editing ? <input autoFocus value={draft}
 				onChange={(event) => setDraft(event.target.value)} onFocus={(event) => event.target.select()}
 				onClick={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}
@@ -86,7 +87,6 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 					if (event.key === "Enter") commit();
 					if (event.key === "Escape") useSubgroups.getState().startEditing(null);
 				}} /> : subgroup.title}
-			onClick={() => { if (!editing) useSubgroups.getState().setCollapsed(subgroup.id, !subgroup.collapsed); }}
 			onDoubleClick={() => { if (!readOnly) startEditing(); }}
 			onContextMenu={(event) => buildMenu().showAtMouseEvent(event.nativeEvent)}
 			toolbar={!editing && <>
@@ -98,10 +98,8 @@ export const Subgroup = ({ subgroup, group, children }: SubgroupProps) => {
 			</>}
 		>
 			{children}
-			<NavigationTreeItem id={`subgroup-slot:${subgroup.id}`} isTab={true} isTabSlot={true}
-				dragData={{ kind: "tab-slot", groupId: group.id, subgroupId: subgroup.id }}
-				classNames={{ "as-new-tab-button": showSlotTab }} title={showSlotTab ? "New tab" : ""}
-				icon={showSlotTab ? "plus" : "slot"} onClick={() => { if (showSlotTab) createTab(); }} />
-		</NavigationTreeItem>
+			<NavigationTabSlot id={`subgroup-slot:${subgroup.id}`} groupId={group.id} subgroupId={subgroup.id}
+				asNewTabButton={showSlotTab} onClick={() => { if (showSlotTab) createTab(); }} />
+		</NavigationSubgroup>
 	);
 };

@@ -3,6 +3,7 @@ import {
 	CSSProperties,
 	forwardRef,
 	MouseEvent,
+	KeyboardEvent,
 	TouchEvent,
 	ReactNode,
 	useEffect,
@@ -16,16 +17,18 @@ import { Identifier } from "src/models/VTWorkspace";
 import { ViewCueIndex } from "src/models/ViewState";
 import { NavigationDragData } from "src/models/NavigationDrag";
 
-interface NavigationTreeItemProps {
+export interface NavigationTreeItemProps {
 	id: Identifier | null;
 	index?: ViewCueIndex;
 	title: string | ReactNode;
 	icon: string;
+	tooltip?: string;
 	webviewIcon?: string;
 	isTab: boolean;
 	isSubgroup?: boolean;
 	dragData?: NavigationDragData;
 	dragDisabled?: boolean;
+	disabled?: boolean;
 	isEphemeralTab?: boolean;
 	isTabSlot?: boolean;
 	isLinkedGroupBtn?: boolean;
@@ -108,6 +111,15 @@ export const NavigationTreeItem = forwardRef<
 		"is-active": props.isActive,
 		"is-being-dragged": isDragging,
 		"is-being-renamed": props.isRenaming,
+		"is-disabled": props.disabled,
+	};
+	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+		listeners?.onKeyDown?.(event);
+		if (!event.defaultPrevented && event.target === event.currentTarget &&
+			(event.key === "Enter" || event.key === " ") && !props.disabled && !props.isRenaming && props.onClick) {
+			event.preventDefault();
+			event.currentTarget.click();
+		}
 	};
 
 	useEffect(() => {
@@ -147,7 +159,13 @@ export const NavigationTreeItem = forwardRef<
 			>
 				<div
 					className={toClassName(selfElClasses)}
-					onClick={props.onClick}
+					title={props.tooltip}
+					aria-expanded={props.isSubgroup ? !props.isCollapsed : undefined}
+					onClick={props.disabled ? undefined : props.onClick}
+					onKeyDown={handleKeyDown}
+					role={props.onClick ? "button" : undefined}
+					tabIndex={props.onClick && !props.disabled ? 0 : undefined}
+					aria-disabled={props.disabled || undefined}
 					onTouchStart={props.onTouchStart}
 					onTouchMove={props.onTouchMove}
 					onTouchEnd={props.onTouchEnd}
@@ -197,7 +215,9 @@ export const NavigationTreeItem = forwardRef<
 			>
 				<div
 					className={toClassName(selfElClasses)}
-					onClick={props.onClick}
+					title={props.tooltip}
+					aria-expanded={props.isSubgroup ? !props.isCollapsed : undefined}
+					onClick={props.disabled ? undefined : props.onClick}
 					onAuxClick={props.onAuxClick}
 					onDoubleClick={props.onDoubleClick}
 					onContextMenu={props.onContextMenu}
@@ -206,6 +226,9 @@ export const NavigationTreeItem = forwardRef<
 					ref={props.id ? setNodeRef : null}
 					{...attributes}
 					{...listeners}
+					onKeyDown={handleKeyDown}
+					aria-disabled={props.disabled ?? attributes["aria-disabled"]}
+					tabIndex={props.disabled ? -1 : attributes.tabIndex}
 				>
 					<div className="tree-item-icon" ref={iconEl}></div>
 					<div className="tree-item-inner">

@@ -8,9 +8,11 @@ import { archivedSubgroup, archivedTab, setupArchive } from "./archive-fixtures.
 import { loadModule } from "./subgroup-fixtures.mjs";
 
 function captureArchive(store, mobile = false) {
-	const capture = { sortables: [], nodes: [], menus: new Map(), sensors: [], restores: 0, deletes: 0 };
+	const capture = { sortables: [], nodes: [], rows: new Map(), treeProps: [], menus: new Map(), sensors: [], restores: 0, deletes: 0 };
 	const runtime = { ...jsxRuntime, ...Object.fromEntries(["jsx", "jsxs"].map((name) => [name, (type, props, key) => {
 		if (typeof type === "string") capture.nodes.push(props);
+		if (props.isSubgroup && props.icon) capture.treeProps.push(props);
+		if (props.className?.includes("tree-item-self")) capture.rows.set(capture.sortables.at(-1).id, props);
 		if (props.onContextMenu && props.className?.includes("tree-item-self")) {
 			capture.menus.set(capture.sortables.at(-1).id, props.onContextMenu);
 		}
@@ -63,6 +65,8 @@ function captureArchive(store, mobile = false) {
 	};
 	imports["./IconButton"] = loadModule("src/components/IconButton.tsx", imports);
 	imports["./NavigationTreeItem"] = loadModule("src/components/NavigationTreeItem.tsx", imports);
+	imports["./NavigationSubgroup"] = loadModule("src/components/NavigationSubgroup.tsx", imports);
+	imports["./NavigationTabSlot"] = loadModule("src/components/NavigationTabSlot.tsx", imports);
 	imports["./useNavigationDrag"] = loadModule("src/components/useNavigationDrag.ts", imports);
 	const { ArchivePanel } = loadModule("src/components/ArchivePanel.tsx", imports);
 	capture.html = renderToStaticMarkup(React.createElement(ArchivePanel));
@@ -111,9 +115,12 @@ test("a restore in progress disables both reopening and removing that record", (
 	store.state().add(archivedTab("one", "One.md"));
 	store.state().setBusy("entry:one", true);
 	const capture = captureArchive(store);
-	assert.match(capture.html, /title="One.md" disabled=""/);
-	assert.match(capture.html, /title="Delete bookmark from archive" disabled=""/);
-	capture.nodes.find((node) => node["data-sortable-id"] === "archive:one").onClick();
+	assert.match(capture.html, /title="One.md"/);
+	assert.equal(capture.rows.get("archive:one")["aria-disabled"], true);
+	assert.equal(capture.rows.get("archive:one").onClick, undefined);
+	const action = capture.nodes.find((node) => node["data-action"] === "delete-archive-tab");
+	assert.equal(action["aria-disabled"], true);
+	action.onClick({ stopPropagation() {} });
 	assert.equal(capture.restores, 0);
 });
 
@@ -247,4 +254,102 @@ test("busy archive entries disable shared sortable rows, slots and menu destinat
 	const before = store.state().data;
 	capture.drop("root", { kind: "subgroup", subgroupId: "subgroup-1" });
 	assert.equal(store.state().data, before);
+});
+
+for (const mobile of [false, true]) test(`archive subgroup disclosure shares live header behavior on ${mobile ? "mobile" : "desktop"}`, () => {
+	const store = setupArchive();
+	store.state().add(archivedSubgroup([archivedTab("child")]));
+	let capture = captureArchive(store, mobile);
+	assert.equal(capture.treeProps.find((props) => props.id === "archive:subgroup-1").icon, "right-triangle");
+	assert.equal(capture.html.includes("toggle-archive-subgroup"), false);
+	assert.equal(capture.html.includes("vt-archive-title"), false);
+	assert.equal(capture.rows.get("archive:subgroup-1")["aria-expanded"], false);
+	capture.rows.get("archive:subgroup-1").onClick();
+	assert.equal(store.state().data.entries[0].collapsed, false);
+	capture = captureArchive(store, mobile);
+	assert.match(capture.html, /data-id="child"/);
+	assert.equal(capture.rows.get("archive:subgroup-1")["aria-expanded"], true);
+	capture.rows.get("archive:subgroup-1").onClick();
+	assert.equal(store.state().data.entries[0].collapsed, true);
+	assert.equal(capture.restores, 0);
+	assert.equal(capture.deletes, 0);
+	const restored = setupArchive(store.writes.at(-1));
+	assert.equal(restored.state().data.entries[0].collapsed, true);
+});
+
+test("archive collapse menus and heading use the shared disclosure without restoring tabs", () => {
+	const store = setupArchive();
+	store.state().add(archivedSubgroup([archivedTab("child")]));
+	let capture = captureArchive(store);
+	capture.menu("subgroup-1").find((item) => item.title === "Expand").click();
+	assert.equal(store.state().data.entries[0].collapsed, false);
+	capture = captureArchive(store);
+	capture.menu("subgroup-1").find((item) => item.title === "Collapse").click();
+	assert.equal(store.state().data.entries[0].collapsed, true);
+	capture.rows.get("").onClick();
+	assert.equal(store.state().data.collapsed, true);
+	capture = captureArchive(store);
+	assert.equal(capture.rows.get("")["aria-expanded"], false);
+	assert.equal(capture.html.includes('data-id="subgroup-1"'), false);
+	capture.rows.get("").onClick();
+	assert.equal(store.state().data.collapsed, false);
+	assert.equal(capture.restores, 0);
+});
+
+test("shared restore/delete toolbar actions never toggle archived subgroup disclosure", () => {
+	const store = setupArchive();
+	store.state().add(archivedSubgroup([archivedTab("child")]));
+	const capture = captureArchive(store);
+	let stopped = 0;
+	for (const action of ["restore-archive-subgroup", "delete-archive-subgroup"]) {
+		const button = capture.nodes.find((node) => node["data-action"] === action);
+		assert.equal(button.role, "button");
+		button.onClick({ stopPropagation() { stopped++; } });
+	}
+	assert.equal(stopped, 2);
+	assert.equal(capture.restores, 1);
+	assert.equal(capture.deletes, 1);
+	assert.equal(store.state().data.entries[0].collapsed, true);
+});
+
+test("busy subgroups and read-only archives cannot toggle disclosure or invoke toolbar actions", () => {
+	const store = setupArchive();
+	store.state().add(archivedSubgroup([archivedTab("child")]));
+	store.state().setBusy("entry:subgroup-1", true);
+	let capture = captureArchive(store);
+	assert.equal(capture.rows.get("archive:subgroup-1").onClick, undefined);
+	assert.equal(capture.menu("subgroup-1").find((item) => item.title === "Expand").disabled, true);
+	capture.menu("subgroup-1").find((item) => item.title === "Expand").click();
+	for (const action of ["restore-archive-subgroup", "delete-archive-subgroup"]) {
+		const button = capture.nodes.find((node) => node["data-action"] === action);
+		assert.equal(button["aria-disabled"], true);
+		button.onClick({ stopPropagation() {} });
+	}
+	assert.equal(store.state().data.entries[0].collapsed, true);
+	assert.equal(capture.restores, 0);
+	assert.equal(capture.deletes, 0);
+	store.useArchive.setState({ readOnly: true });
+	capture = captureArchive(store);
+	assert.equal(capture.rows.get("").onClick, undefined);
+});
+
+test("shared row and icon controls retain keyboard activation without double actions", () => {
+	const store = setupArchive();
+	store.state().addMany([archivedTab("root"), archivedSubgroup([])]);
+	const capture = captureArchive(store);
+	for (const id of ["archive:subgroup-1", "archive:root"]) {
+		const row = capture.rows.get(id);
+		const target = { click() { row.onClick(); } };
+		let prevented = false;
+		row.onKeyDown({ key: "Enter", target, currentTarget: target, defaultPrevented: false,
+			preventDefault() { prevented = true; } });
+		assert.equal(prevented, true);
+	}
+	assert.equal(store.state().data.entries[1].collapsed, false);
+	assert.equal(capture.restores, 1);
+	const button = capture.nodes.find((node) => node["data-action"] === "restore-archive-subgroup");
+	button.onKeyDown({ key: " ", preventDefault() {}, stopPropagation() {},
+		currentTarget: { click() { button.onClick({ stopPropagation() {} }); } } });
+	assert.equal(capture.restores, 2);
+	assert.equal(store.state().data.entries[1].collapsed, false);
 });

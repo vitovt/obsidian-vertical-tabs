@@ -41,11 +41,13 @@ tabs. Standalone tabs without a file cannot be archived. No vault files are
 deleted by archiving, closing, or deleting an archive entry.
 
 Click an archived tab to open it in the current tab group without subgroup
-membership. Expand an archived subgroup to open an individual tab, or click its
-title to restore the whole subgroup in the current group without adding a split
-pane. File view states, pinned status, tab customization, and subgroup collapse
-state are restored. Normal sorting and deduplication settings still apply;
-when deduplication is enabled, matching open tabs are reused.
+membership. Click a subgroup header to expand or collapse it, just like in the
+main list. Open an individual tab from an expanded subgroup, or use its
+**Restore subgroup** button or context menu to restore the whole subgroup in
+the current group without adding a split pane. File view states, pinned status,
+tab customization, and subgroup collapse state are restored. Normal sorting
+and deduplication settings still apply; when deduplication is enabled, matching
+open tabs are reused.
 
 By default, successfully restored bookmarks are removed from the archive;
 opening one child removes only that bookmark. Enable **Keep restored items in

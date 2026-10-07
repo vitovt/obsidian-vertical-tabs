@@ -33,9 +33,10 @@ file and folder renames, invalid saved records, and failed writes. Archive
 updates are published only after the persistent write succeeds.
 Archive service tests cover mixed file/service subgroups, partial restores,
 current-group placement, deduplication, repeat clicks, and both retention modes.
-Archive rendering tests cover collapse states and independent bookmark/subgroup
-delete controls without registering native tab indices. Archive moves use a
-separate drag context from open tabs; move tests cover ordering, subgroup
+Archive rendering tests cover shared subgroup disclosure and toolbar actions,
+collapse persistence, and independent bookmark/subgroup delete controls without
+registering native tab indices. Archive moves use a separate drag context from
+open tabs; move tests cover ordering, subgroup
 membership, empty parents, restart persistence, busy entries, and failed writes.
 
 To verify subgroups in Obsidian:
@@ -61,14 +62,20 @@ To verify subgroups in Obsidian:
 
 To verify the archive in Obsidian:
 
+Compare archived and live subgroup headers: clicking the title, triangle, or
+background must toggle disclosure with the same arrow rotation and indentation.
+Restore/delete toolbar actions must not toggle disclosure. Check keyboard and
+mobile activation, busy records, and persistence after restart.
+
 1. Archive a Markdown tab, Canvas, and PDF, including a pinned and deferred tab.
    Confirm tabs close and bookmarks appear below open groups. Restart Obsidian
    and check that archive entries and collapse states survive.
 2. Archive a subgroup containing files and a search tab. Confirm all its members
    close, only the file bookmarks appear in the archive, and other tabs stay open.
 3. Click one archived subgroup child. Confirm it opens in the current group
-   outside any subgroup and only that child is consumed. Click the remaining
-   subgroup title and confirm it restores together without creating a split.
+   outside any subgroup and only that child is consumed. Use the remaining
+   subgroup's restore button and confirm it restores together without creating
+   a split.
 4. Enable Keep restored items in archive and repeat with a tab and subgroup.
    Test with deduplication on and off, and restore into another current group.
    Repeat with sidebar/popout deduplication and Always open in new tab enabled.

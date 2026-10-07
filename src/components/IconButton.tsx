@@ -34,7 +34,18 @@ export const IconButton = (props: IconButtonProps) => {
 		<div
 			className={toClassName(buttonElClasses)}
 			data-action={props.action}
+			role="button"
+			aria-label={props.tooltip}
+			aria-disabled={props.disabled || undefined}
+			tabIndex={props.onClick && !props.disabled ? 0 : -1}
 			ref={buttonEl}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					event.stopPropagation();
+					event.currentTarget.click();
+				}
+			}}
 			onClick={(e) => {
 				e.stopPropagation();
 				if (!props.disabled && props.onClick) props.onClick(e);

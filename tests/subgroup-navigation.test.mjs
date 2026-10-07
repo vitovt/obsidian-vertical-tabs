@@ -25,8 +25,13 @@ test("the navigation tree filters native order, preserves indices and renders em
 	const renderStore = { ...store, useSubgroups: Object.assign((selector) => selector(store.state()), {
 		getState: store.state,
 	}) };
+	const subgroupRows = new Map();
+	const runtime = { ...jsxRuntime, ...Object.fromEntries(["jsx", "jsxs"].map((name) => [name, (type, props, key) => {
+		if (props.onClick && props.className?.includes("tree-item-self")) subgroupRows.set(sortableConfigs.at(-1).id, props);
+		return jsxRuntime[name](type, props, key);
+	}])) };
 	const imports = {
-		react: React, "react/jsx-runtime": jsxRuntime,
+		react: React, "react/jsx-runtime": runtime,
 		obsidian: { Platform: { isMobile: false } },
 		"src/stores/SubgroupStore": renderStore,
 		"src/stores/ArchiveStore": { useArchive: (selector) => selector({ readOnly: false, busyIds: [] }) },
@@ -63,6 +68,8 @@ test("the navigation tree filters native order, preserves indices and renders em
 	};
 	imports["./useNavigationDrag"] = loadModule("src/components/useNavigationDrag.ts", imports);
 	imports["./NavigationTreeItem"] = loadModule("src/components/NavigationTreeItem.tsx", imports);
+	imports["./NavigationSubgroup"] = loadModule("src/components/NavigationSubgroup.tsx", imports);
+	imports["./NavigationTabSlot"] = loadModule("src/components/NavigationTabSlot.tsx", imports);
 	imports["./Subgroup"] = loadModule("src/components/Subgroup.tsx", imports);
 	const { NavigationContent } = loadModule("src/components/NavigationContent.tsx", imports);
 	const html = renderToStaticMarkup(React.createElement(NavigationContent));
@@ -79,4 +86,35 @@ test("the navigation tree filters native order, preserves indices and renders em
 	assert.equal(slot.disabled.draggable, true);
 	assert.ok(!slot.disabled.droppable, "empty subgroup slots accept drops");
 	assert.equal(slot.data.subgroupId, one);
+	const header = subgroupRows.get(`subgroup:${one}`);
+	assert.equal(header["aria-expanded"], true);
+	header.onClick();
+	assert.equal(store.state().data.subgroupsByGroup[group.id].find((item) => item.id === one).collapsed, true);
+	assert.equal(store.state().data.subgroupByLeaf.a, one, "disclosure never changes membership");
+});
+
+test("editing a shared subgroup header leaves its title input usable and does not toggle disclosure", () => {
+	let toggles = 0;
+	let header;
+	const runtime = { ...jsxRuntime, ...Object.fromEntries(["jsx", "jsxs"].map((name) => [name, (type, props, key) => {
+		if (props.className?.includes("tree-item-self")) header = props;
+		return jsxRuntime[name](type, props, key);
+	}])) };
+	const imports = {
+		react: React, "react/jsx-runtime": runtime,
+		obsidian: { Platform: { isMobile: false } },
+		"src/utils/CssClasses": { toClassName: (classes) => Object.keys(classes).filter((key) => classes[key]).join(" ") },
+		"@dnd-kit/sortable": { useSortable: () => ({ attributes: {}, listeners: {}, setNodeRef() {} }) },
+	};
+	imports["./NavigationTreeItem"] = loadModule("src/components/NavigationTreeItem.tsx", imports);
+	const { NavigationSubgroup } = loadModule("src/components/NavigationSubgroup.tsx", imports);
+	const html = renderToStaticMarkup(React.createElement(NavigationSubgroup, {
+		id: "editing", isCollapsed: false, isRenaming: true,
+		title: React.createElement("input", { defaultValue: "Research" }), onCollapsedChange: () => { toggles++; },
+	}));
+	assert.match(html, /input value="Research"/);
+	assert.equal(header.className.includes("is-disabled"), false);
+	header.onClick();
+	header.onKeyDown({ key: "Enter", target: {}, currentTarget: { click() { toggles++; } }, defaultPrevented: false });
+	assert.equal(toggles, 0);
 });
