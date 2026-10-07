@@ -90,7 +90,7 @@ test("the archive renders bookmarks, subgroup children and independent delete bu
 		...archivedSubgroup([archivedTab("child", "Two.md")]), collapsed: false,
 	}]);
 	const html = renderArchive(store);
-	assert.match(html, /aria-label="Archive"/);
+	assert.match(html, /aria-label="Archive \(Bookmarks\)"/);
 	for (const id of ["standalone", "subgroup-1", "child"]) assert.match(html, new RegExp(`data-id="${id}"`));
 	assert.equal((html.match(/data-action="delete-archive-tab"/g) ?? []).length, 2);
 	assert.equal((html.match(/data-action="delete-archive-subgroup"/g) ?? []).length, 1);

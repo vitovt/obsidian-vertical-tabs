@@ -97,8 +97,8 @@ export const ArchivePanel = () => {
 	};
 	return <section className={toClassName({
 		"vt-archive": true, "is-dragging": !!dragKind, "is-dragging-subgroup": dragKind === "subgroup",
-	})} aria-label="Archive">
-		<NavigationSubgroup id={null} title="Archive" isCollapsed={collapsed} dragDisabled={true}
+	})} aria-label="Archive (Bookmarks)">
+		<NavigationSubgroup id={null} title="Archive (Bookmarks)" isCollapsed={collapsed} dragDisabled={true}
 			collapseDisabled={readOnly} onCollapsedChange={(collapsed) => useArchive.getState().setCollapsed(collapsed)}
 			classNames={{ "vt-archive-heading": true }} toolbar={<span className="vt-archive-count">{entries.length}</span>}>
 			{!readOnly && <DndContext {...dragProps}>

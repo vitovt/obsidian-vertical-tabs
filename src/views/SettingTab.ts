@@ -560,7 +560,7 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 	}
 
 	private displayArchiveSettingsSection(containerEl: HTMLElement) {
-		const group = this.createSettingGroup(containerEl, "Archive");
+		const group = this.createSettingGroup(containerEl, "Archive (Bookmarks)");
 		this.createToggle(group, {
 			name: "Enable archive",
 			desc: "Archive tabs and subgroups for later. Turning this off hides archive controls and keeps saved entries.",
@@ -1630,7 +1630,7 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 			// Archive settings
 			{
 				type: "group",
-				heading: "Archive",
+				heading: "Archive (Bookmarks)",
 				visible: () =>
 					!loadDisableOnThisDevice() &&
 					!this.plugin.settings.backgroundMode,
